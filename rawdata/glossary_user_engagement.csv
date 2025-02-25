@@ -1,0 +1,23 @@
+name,definition
+cadence,the date unit over which a report is run: weekly or monthly
+period_start,the start date of a given period
+period_end,the end date of a given period
+account_id,the account id for a given customer
+public_id,the public user id of a given user (part of account_id above)
+name,the name associated with public_id
+email,the email associated with public_id
+user_role,"denotes a given user's role: user, admin, or owner"
+role,user-entered role for a given user
+department,user-entered department for a given user
+user_status,"denotes if a user is pending, enabled, or deleted"
+created_or_invited_date,"denotes the date a user was invited if pending, or the date they created their account if enabled"
+is_active,denotes if a user is active in a given period. active is defined as sending at least 1 message
+first_day_active_in_period,the first day a user was active (e.g. sent a message) in a given period
+last_day_active_in_period,the last day a user was active (e.g. sent a message) in a given period
+messages,the total messages a user sent in a given period
+messages_rank,the user's rank relative to all other active users in a given period
+gpt_messages,messages sent to a custom GPT by a user in a given period
+gpts_messaged,the count of unique custom GPTs messaged by a user in a given period
+tool_messages,"messages sent by a user to a tool in a given period. Note: currently limited to dalle, file upload, search, and python"
+tools_messaged,"the count of unique tools interacted with by a user in a given period. Note: currently limited to dalle, file upload, search, and python"
+last_day_active,the last day a user was active (e.g. sent a message) in this or any prior period. the same as last_day_active_in_period but not limited to a given period
