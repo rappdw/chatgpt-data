@@ -32,10 +32,10 @@ user_trends [--data-dir DIRECTORY] [--output-dir DIRECTORY] [--engagement-report
 Options:
 - `--data-dir`: Directory containing the raw data files (default: ./rawdata)
 - `--output-dir`: Directory to save the output files (default: ./data)
-- `--engagement-report`: Generate a report of user engagement levels
+- `--engagement-report`: Generate a report of user engagement levels based on average message count
 - `--non-engaged-report`: Generate a report of users who have never engaged
-- `--high-threshold`: Minimum number of messages to be considered highly engaged (default: 20)
-- `--low-threshold`: Maximum number of messages to be considered low engaged (default: 5)
+- `--high-threshold`: Minimum average number of messages to be considered highly engaged (default: 20)
+- `--low-threshold`: Maximum average number of messages to be considered low engaged (default: 5)
 
 ### gpt_trends
 A command-line tool that provides analysis of ChatGPT custom GPT trends. It generates trend graphs (PNG files) in the data directory.
@@ -63,7 +63,7 @@ Options:
 ## Generated Reports
 
 ### User Engagement Reports
-- `user_engagement_report.csv`: Report of user engagement levels (high, medium, low, none)
+- `user_engagement_report.csv`: Report of user engagement levels (high, medium, low, none) based on average message count across all periods
 - `non_engaged_users_report.csv`: Report of users who have never engaged across all tracked periods
 
 ## Development

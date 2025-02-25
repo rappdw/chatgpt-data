@@ -196,11 +196,11 @@ class UserAnalysis:
         self.generate_gpt_usage_trend()
         
     def get_engagement_levels(self, high_threshold: int = 20, low_threshold: int = 5) -> pd.DataFrame:
-        """Categorize users by engagement level based on message count.
+        """Categorize users by engagement level based on average message count across all periods.
         
         Args:
-            high_threshold: Minimum number of messages to be considered highly engaged
-            low_threshold: Maximum number of messages to be considered low engaged
+            high_threshold: Minimum average number of messages to be considered highly engaged
+            low_threshold: Maximum average number of messages to be considered low engaged
             
         Returns:
             DataFrame with user information and engagement level
@@ -208,16 +208,33 @@ class UserAnalysis:
         if self.user_data is None:
             raise ValueError("User data not loaded")
             
-        # Create a copy of the user data with relevant columns
-        engagement_df = self.user_data[
-            ["account_id", "public_id", "name", "email", "messages", "period_start", "period_end"]
-        ].copy()
+        # Filter to only include rows with valid message data
+        valid_data = self.user_data[pd.notna(self.user_data["messages"])].copy()
+        
+        # Calculate average messages per user across all periods
+        engagement_df = (
+            valid_data
+            .groupby(["account_id", "public_id", "name", "email"])
+            .agg({
+                "messages": "mean",
+                "period_start": "min",
+                "period_end": "max"
+            })
+            .reset_index()
+        )
+        
+        # Rename columns for clarity
+        engagement_df = engagement_df.rename(columns={
+            "messages": "avg_messages",
+            "period_start": "first_period",
+            "period_end": "last_period"
+        })
         
         # Add engagement level column
         conditions = [
-            (engagement_df["messages"] >= high_threshold),
-            (engagement_df["messages"] <= low_threshold) & (engagement_df["messages"] > 0),
-            (engagement_df["messages"] == 0)
+            (engagement_df["avg_messages"] >= high_threshold),
+            (engagement_df["avg_messages"] <= low_threshold) & (engagement_df["avg_messages"] > 0),
+            (engagement_df["avg_messages"] == 0)
         ]
         choices = ["high", "low", "none"]
         engagement_df["engagement_level"] = np.select(conditions, choices, default="medium")
@@ -225,7 +242,7 @@ class UserAnalysis:
         return engagement_df
     
     def generate_engagement_report(self, output_file: str = None) -> pd.DataFrame:
-        """Generate a report of user engagement levels.
+        """Generate a report of user engagement levels based on average message count.
         
         Args:
             output_file: Path to save the report CSV file (optional)
@@ -236,21 +253,42 @@ class UserAnalysis:
         if self.user_data is None:
             raise ValueError("User data not loaded")
             
-        # Get engagement levels
-        engagement_df = self.get_engagement_levels()
+        # Filter to only include rows with valid message data
+        valid_data = self.user_data[pd.notna(self.user_data["messages"])].copy()
         
-        # Group by user and get the most recent period data
-        user_latest = (
-            engagement_df
-            .sort_values("period_end", ascending=False)
-            .groupby(["account_id", "public_id", "email"])
-            .first()
+        # Calculate average messages per user across all periods
+        user_avg = (
+            valid_data
+            .groupby(["account_id", "public_id", "name", "email"])
+            .agg({
+                "messages": "mean",
+                "period_start": "min",
+                "period_end": "max",
+                "is_active": "sum"
+            })
             .reset_index()
         )
         
+        # Rename columns for clarity
+        user_avg = user_avg.rename(columns={
+            "messages": "avg_messages",
+            "period_start": "first_period",
+            "period_end": "last_period",
+            "is_active": "active_periods"
+        })
+        
+        # Add engagement level column based on average message count
+        conditions = [
+            (user_avg["avg_messages"] >= 20),
+            (user_avg["avg_messages"] <= 5) & (user_avg["avg_messages"] > 0),
+            (user_avg["avg_messages"] == 0)
+        ]
+        choices = ["high", "low", "none"]
+        user_avg["engagement_level"] = np.select(conditions, choices, default="medium")
+        
         # Count users by engagement level
-        engagement_counts = user_latest["engagement_level"].value_counts().to_dict()
-        print(f"Engagement Levels Summary:")
+        engagement_counts = user_avg["engagement_level"].value_counts().to_dict()
+        print(f"Engagement Levels Summary (based on average message count):")
         print(f"  High: {engagement_counts.get('high', 0)}")
         print(f"  Medium: {engagement_counts.get('medium', 0)}")
         print(f"  Low: {engagement_counts.get('low', 0)}")
@@ -258,11 +296,11 @@ class UserAnalysis:
         
         # Save to file if specified
         if output_file:
-            user_latest.to_csv(output_file, index=False)
+            user_avg.to_csv(output_file, index=False)
             print(f"Engagement report saved to {output_file}")
             
-        return user_latest
-    
+        return user_avg
+
     def get_non_engaged_users(self) -> pd.DataFrame:
         """Identify users who have never engaged across all tracked periods.
         

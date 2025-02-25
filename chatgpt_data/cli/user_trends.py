@@ -27,7 +27,7 @@ def main():
     parser.add_argument(
         "--engagement-report",
         action="store_true",
-        help="Generate user engagement level report",
+        help="Generate user engagement level report based on average message count",
     )
     parser.add_argument(
         "--non-engaged-report",
@@ -38,13 +38,13 @@ def main():
         "--high-threshold",
         type=int,
         default=20,
-        help="Minimum number of messages to be considered highly engaged (default: 20)",
+        help="Minimum average number of messages to be considered highly engaged (default: 20)",
     )
     parser.add_argument(
         "--low-threshold",
         type=int,
         default=5,
-        help="Maximum number of messages to be considered low engaged (default: 5)",
+        help="Maximum average number of messages to be considered low engaged (default: 5)",
     )
     args = parser.parse_args()
 
