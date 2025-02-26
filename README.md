@@ -49,6 +49,24 @@ Options:
 - `--data-dir`: Directory containing the raw data files (default: ./rawdata)
 - `--output-dir`: Directory to save the output files (default: ./data)
 
+### all_trends
+A comprehensive command-line tool that runs both user and GPT analyses in one go. It generates all trend graphs and reports in the data directory.
+
+```bash
+all_trends [--data-dir DIRECTORY] [--output-dir DIRECTORY] [--skip-user-trends] [--skip-gpt-trends] [--skip-engagement-report] [--skip-non-engaged-report] [--latest-period-only] [--high-threshold N] [--low-threshold N]
+```
+
+Options:
+- `--data-dir`: Directory containing the raw data files (default: ./rawdata)
+- `--output-dir`: Directory to save the output files (default: ./data)
+- `--skip-user-trends`: Skip generating user trend graphs
+- `--skip-gpt-trends`: Skip generating GPT trend graphs
+- `--skip-engagement-report`: Skip generating user engagement level report
+- `--skip-non-engaged-report`: Skip generating report of non-engaged users
+- `--latest-period-only`: For non-engaged report, only consider the latest period instead of all periods
+- `--high-threshold`: Minimum average number of messages to be considered highly engaged (default: 20)
+- `--low-threshold`: Maximum average number of messages to be considered low engaged (default: 5)
+
 ## Generated Graphs
 
 ### User Trends

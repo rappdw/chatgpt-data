@@ -20,6 +20,7 @@ dependencies = [
 [project.scripts]
 user_trends = "chatgpt_data.cli.user_trends:main"
 gpt_trends = "chatgpt_data.cli.gpt_trends:main"
+all_trends = "chatgpt_data.cli.all_trends:main"
 
 [project.optional-dependencies]
 dev = [
