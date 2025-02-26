@@ -82,6 +82,14 @@ class GPTAnalysis:
         ax.set_ylabel("Number of Active GPTs")
         ax.grid(True)
         
+        # Add comment box with explanation
+        comment = """This graph shows the number of active custom GPTs for each time period.
+An active GPT is defined as one that received at least one message during the period.
+The trend indicates how custom GPT adoption and usage has evolved over time."""
+        props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+        ax.text(0.05, 0.05, comment, transform=ax.transAxes, fontsize=9,
+                verticalalignment='bottom', bbox=props)
+        
         # Rotate x-axis labels for better readability
         plt.xticks(rotation=45)
         plt.tight_layout()
@@ -129,6 +137,14 @@ class GPTAnalysis:
         ax.set_ylabel("Number of GPT Messages")
         ax.grid(True)
         
+        # Add comment box with explanation
+        comment = """This graph shows the total number of messages sent to custom GPTs for each time period.
+The trend indicates overall GPT usage intensity and can help identify which periods
+had the highest GPT engagement and interaction."""
+        props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+        ax.text(0.05, 0.05, comment, transform=ax.transAxes, fontsize=9,
+                verticalalignment='bottom', bbox=props)
+        
         # Rotate x-axis labels for better readability
         plt.xticks(rotation=45)
         plt.tight_layout()
@@ -175,6 +191,14 @@ class GPTAnalysis:
         ax.set_xlabel("Period")
         ax.set_ylabel("Number of Unique Messagers")
         ax.grid(True)
+        
+        # Add comment box with explanation
+        comment = """This graph shows the number of unique users interacting with custom GPTs in each period.
+The trend indicates how broadly GPTs are being adopted across the user base and
+can help measure the effectiveness of GPT promotion and training efforts."""
+        props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+        ax.text(0.05, 0.05, comment, transform=ax.transAxes, fontsize=9,
+                verticalalignment='bottom', bbox=props)
         
         # Rotate x-axis labels for better readability
         plt.xticks(rotation=45)

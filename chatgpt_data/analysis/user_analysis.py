@@ -83,6 +83,14 @@ class UserAnalysis:
         ax.set_ylabel("Number of Active Users")
         ax.grid(True)
         
+        # Add comment box with explanation
+        comment = """This graph shows the number of active users for each time period.
+An active user is defined as someone who sent at least one message during the period.
+The trend indicates how user adoption and engagement has changed over time."""
+        props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+        ax.text(0.05, 0.05, comment, transform=ax.transAxes, fontsize=9,
+                verticalalignment='bottom', bbox=props)
+        
         # Rotate x-axis labels for better readability
         plt.xticks(rotation=45)
         plt.tight_layout()
@@ -130,6 +138,14 @@ class UserAnalysis:
         ax.set_ylabel("Number of Messages")
         ax.grid(True)
         
+        # Add comment box with explanation
+        comment = """This graph shows the total number of messages sent across all users for each time period.
+The trend indicates overall platform usage and can help identify seasonal patterns or
+the impact of new features/promotions on engagement."""
+        props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+        ax.text(0.05, 0.05, comment, transform=ax.transAxes, fontsize=9,
+                verticalalignment='bottom', bbox=props)
+        
         # Rotate x-axis labels for better readability
         plt.xticks(rotation=45)
         plt.tight_layout()
@@ -176,6 +192,14 @@ class UserAnalysis:
         ax.set_xlabel("Period")
         ax.set_ylabel("Number of GPT Messages")
         ax.grid(True)
+        
+        # Add comment box with explanation
+        comment = """This graph shows the total number of messages sent to GPTs for each time period.
+The trend indicates how GPT adoption has changed over time and can help measure
+the impact of new GPT features or training initiatives."""
+        props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+        ax.text(0.05, 0.05, comment, transform=ax.transAxes, fontsize=9,
+                verticalalignment='bottom', bbox=props)
         
         # Rotate x-axis labels for better readability
         plt.xticks(rotation=45)
