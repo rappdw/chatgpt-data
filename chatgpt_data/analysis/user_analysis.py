@@ -253,8 +253,19 @@ class UserAnalysis:
         if self.user_data is None:
             raise ValueError("User data not loaded")
             
-        # Filter to only include rows with valid message data
-        valid_data = self.user_data[pd.notna(self.user_data["messages"])].copy()
+        # Get the latest period data to identify active users
+        latest_period = self.user_data["period_end"].max()
+        latest_data = self.user_data[self.user_data["period_end"] == latest_period]
+        
+        # Filter out users with pending status
+        active_users = latest_data[latest_data["user_status"] != "pending"]
+        active_user_ids = set(active_users["public_id"].unique())
+        
+        # Filter to only include rows with valid message data and active users
+        valid_data = self.user_data[
+            (pd.notna(self.user_data["messages"])) & 
+            (self.user_data["public_id"].isin(active_user_ids))
+        ].copy()
         
         # Calculate average messages per user across all periods
         user_avg = (
@@ -285,6 +296,16 @@ class UserAnalysis:
         ]
         choices = ["high", "low", "none"]
         user_avg["engagement_level"] = np.select(conditions, choices, default="medium")
+        
+        # Create a custom sort order for engagement levels
+        engagement_order = {"high": 0, "medium": 1, "low": 2, "none": 3}
+        user_avg["engagement_sort"] = user_avg["engagement_level"].map(engagement_order)
+        
+        # Sort by engagement level (high to low) and then by average messages (high to low)
+        user_avg = user_avg.sort_values(
+            by=["engagement_sort", "avg_messages"], 
+            ascending=[True, False]
+        ).drop(columns=["engagement_sort"])
         
         # Count users by engagement level
         engagement_counts = user_avg["engagement_level"].value_counts().to_dict()
