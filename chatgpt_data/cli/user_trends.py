@@ -32,7 +32,12 @@ def main():
     parser.add_argument(
         "--non-engaged-report",
         action="store_true",
-        help="Generate report of users who have never engaged",
+        help="Generate report of users who have never engaged across all tracked periods",
+    )
+    parser.add_argument(
+        "--latest-period-only",
+        action="store_true",
+        help="For non-engaged report, only consider the latest period instead of all periods",
     )
     parser.add_argument(
         "--high-threshold",
@@ -67,7 +72,10 @@ def main():
     # Generate non-engaged users report if requested
     if args.non_engaged_report:
         non_engaged_file = output_dir / "non_engaged_users_report.csv"
-        analyzer.generate_non_engagement_report(output_file=str(non_engaged_file))
+        analyzer.generate_non_engagement_report(
+            output_file=str(non_engaged_file),
+            only_latest_period=args.latest_period_only
+        )
 
 
 if __name__ == "__main__":

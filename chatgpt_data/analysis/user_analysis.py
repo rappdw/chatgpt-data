@@ -322,8 +322,12 @@ class UserAnalysis:
             
         return user_avg
 
-    def get_non_engaged_users(self) -> pd.DataFrame:
-        """Identify users who have never engaged across all tracked periods.
+    def get_non_engaged_users(self, only_latest_period: bool = False) -> pd.DataFrame:
+        """Identify users who have never engaged across all tracked periods or just the latest period.
+        
+        Args:
+            only_latest_period: If True, only consider the latest period for non-engagement
+                                If False, identify users who have never engaged across all periods
         
         Returns:
             DataFrame with non-engaged user information
@@ -331,54 +335,77 @@ class UserAnalysis:
         if self.user_data is None:
             raise ValueError("User data not loaded")
             
-        # Get all unique users
-        all_users = self.user_data[["account_id", "public_id", "name", "email"]].drop_duplicates()
-        
-        # Get users who have been active at least once
-        active_users = self.user_data[self.user_data["is_active"] == 1][
-            ["account_id", "public_id", "name", "email"]
-        ].drop_duplicates()
-        
-        # Find users who have never been active
-        never_active = pd.merge(
-            all_users, active_users, 
-            on=["account_id", "public_id", "email"], 
-            how="left", 
-            indicator=True,
-            suffixes=("", "_active")
-        )
-        never_active = never_active[never_active["_merge"] == "left_only"].drop(["_merge", "name_active"], axis=1, errors="ignore")
-        
-        # Get additional user information
-        user_info = self.user_data[["account_id", "public_id", "email", "user_role", "role", "department", "user_status", "created_or_invited_date"]].drop_duplicates()
-        never_active = pd.merge(
-            never_active,
-            user_info,
-            on=["account_id", "public_id", "email"],
-            how="left"
-        )
-        
-        return never_active
+        if only_latest_period:
+            # Get the latest period data
+            latest_period = self.user_data["period_end"].max()
+            latest_data = self.user_data[self.user_data["period_end"] == latest_period]
+            
+            # Filter out pending users
+            active_latest_users = latest_data[latest_data["user_status"] != "pending"]
+            
+            # Find users who were not active in the latest period
+            non_engaged_latest = active_latest_users[
+                (active_latest_users["is_active"] == 0) | 
+                (pd.isna(active_latest_users["is_active"]))
+            ]
+            
+            # Make sure we have all necessary columns
+            result = non_engaged_latest.copy()
+            
+            return result
+        else:
+            # Get all unique users
+            all_users = self.user_data[["account_id", "public_id", "name", "email"]].drop_duplicates()
+            
+            # Get users who have been active at least once
+            active_users = self.user_data[self.user_data["is_active"] == 1][
+                ["account_id", "public_id", "name", "email"]
+            ].drop_duplicates()
+            
+            # Find users who have never been active
+            never_active = pd.merge(
+                all_users, active_users, 
+                on=["account_id", "public_id", "email"], 
+                how="left", 
+                indicator=True,
+                suffixes=("", "_active")
+            )
+            never_active = never_active[never_active["_merge"] == "left_only"].drop(["_merge", "name_active"], axis=1, errors="ignore")
+            
+            # Get additional user information
+            user_info = self.user_data[["account_id", "public_id", "email", "user_role", "role", "department", "user_status", "created_or_invited_date"]].drop_duplicates()
+            never_active = pd.merge(
+                never_active,
+                user_info,
+                on=["account_id", "public_id", "email"],
+                how="left"
+            )
+            
+            return never_active
 
-    def generate_non_engagement_report(self, output_file: str = None) -> pd.DataFrame:
+    def generate_non_engagement_report(self, output_file: str = None, only_latest_period: bool = False) -> pd.DataFrame:
         """Generate a report of users who have never engaged.
         
         Args:
             output_file: Path to save the report CSV file (optional)
+            only_latest_period: If True, only consider the latest period for non-engagement
+                                If False, identify users who have never engaged across all periods
             
         Returns:
             DataFrame with non-engaged user report
         """
         # Get non-engaged users
-        non_engaged = self.get_non_engaged_users()
+        non_engaged = self.get_non_engaged_users(only_latest_period=only_latest_period)
         
-        print(f"Non-Engaged Users Summary:")
+        period_text = "in the latest period" if only_latest_period else "across all tracked periods"
+        print(f"Non-Engaged Users Summary {period_text}:")
         print(f"  Total non-engaged users: {len(non_engaged)}")
         
-        # Count by user status
-        status_counts = non_engaged["user_status"].value_counts().to_dict()
-        for status, count in status_counts.items():
-            print(f"  {status}: {count}")
+        # Count by user status if the column exists
+        if 'user_status' in non_engaged.columns:
+            status_counts = non_engaged["user_status"].value_counts().to_dict()
+            for status, count in status_counts.items():
+                print(f"  {status}: {count}")
         
         # Save to file if specified
         if output_file:

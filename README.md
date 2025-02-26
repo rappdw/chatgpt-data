@@ -26,7 +26,7 @@ pip install -e .
 A command-line tool that provides analysis of ChatGPT user trends. It generates trend graphs (PNG files) in the data directory.
 
 ```bash
-user_trends [--data-dir DIRECTORY] [--output-dir DIRECTORY] [--engagement-report] [--non-engaged-report] [--high-threshold N] [--low-threshold N]
+user_trends [--data-dir DIRECTORY] [--output-dir DIRECTORY] [--engagement-report] [--non-engaged-report] [--high-threshold N] [--low-threshold N] [--latest-period-only]
 ```
 
 Options:
@@ -36,6 +36,7 @@ Options:
 - `--non-engaged-report`: Generate a report of users who have never engaged
 - `--high-threshold`: Minimum average number of messages to be considered highly engaged (default: 20)
 - `--low-threshold`: Maximum average number of messages to be considered low engaged (default: 5)
+- `--latest-period-only`: For non-engaged report, only consider the latest period instead of all periods
 
 ### gpt_trends
 A command-line tool that provides analysis of ChatGPT custom GPT trends. It generates trend graphs (PNG files) in the data directory.
@@ -64,7 +65,7 @@ Options:
 
 ### User Engagement Reports
 - `user_engagement_report.csv`: Report of user engagement levels (high, medium, low, none) based on average message count across all periods
-- `non_engaged_users_report.csv`: Report of users who have never engaged across all tracked periods
+- `non_engaged_users_report.csv`: Report of users who have never engaged (either across all tracked periods or only in the latest period, depending on the `--latest-period-only` option)
 
 ## Development
 
