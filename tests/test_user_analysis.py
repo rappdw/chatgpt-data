@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
+import matplotlib.pyplot as plt
 
 from chatgpt_data.analysis.user_analysis import UserAnalysis
 
@@ -19,6 +20,11 @@ def mock_user_data():
         "is_active": [1, 1, 1],
         "messages": [10, 20, 30],
         "gpt_messages": [5, 10, 15],
+        "account_id": ["acc1", "acc1", "acc1"],
+        "public_id": ["pub1", "pub1", "pub1"],
+        "name": ["Test User", "Test User", "Test User"],
+        "email": ["test@example.com", "test@example.com", "test@example.com"],
+        "user_status": ["active", "active", "active"]
     })
 
 
@@ -76,3 +82,21 @@ class TestUserAnalysis:
         
         # Assert
         assert fig is not None
+        
+    def test_generate_message_histogram(self, mock_user_data, tmp_path):
+        """Test generating a message histogram."""
+        with patch.object(UserAnalysis, '_load_data'):
+            analysis = UserAnalysis(data_dir=tmp_path, output_dir=tmp_path)
+            analysis.user_data = mock_user_data
+            
+            # Test with default parameters
+            fig = analysis.generate_message_histogram(save=False)
+            assert isinstance(fig, plt.Figure)
+            
+            # Test with custom parameters
+            fig = analysis.generate_message_histogram(bins=10, max_value=50, save=False)
+            assert isinstance(fig, plt.Figure)
+            
+            # Test saving the figure
+            analysis.generate_message_histogram(save=True)
+            assert (tmp_path / "message_histogram.png").exists()

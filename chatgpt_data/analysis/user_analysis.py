@@ -213,12 +213,85 @@ the impact of new GPT features or training initiatives."""
         
         return fig
 
+    def generate_message_histogram(self, bins: int = 20, max_value: Optional[int] = None, save: bool = True) -> Optional[plt.Figure]:
+        """Generate a histogram of average messages sent by users.
+        
+        Args:
+            bins: Number of bins for the histogram
+            max_value: Maximum value to include in the histogram (None for no limit)
+            save: Whether to save the figure to the output directory
+            
+        Returns:
+            The matplotlib figure if save is False, otherwise None
+        """
+        if self.user_data is None:
+            raise ValueError("User data not loaded")
+            
+        # Get engagement data which already has average messages calculated
+        engagement_df = self.get_engagement_levels()
+        
+        # Filter out extreme values if max_value is specified
+        if max_value is not None:
+            plot_data = engagement_df[engagement_df["avg_messages"] <= max_value]
+        else:
+            plot_data = engagement_df
+        
+        # Create the histogram
+        fig, ax = plt.subplots(figsize=(12, 7))
+        
+        # Plot histogram with density=False to show counts
+        n, bins_array, patches = ax.hist(
+            plot_data["avg_messages"], 
+            bins=bins, 
+            edgecolor='black', 
+            alpha=0.7
+        )
+        
+        # Add a vertical line for the mean
+        mean_value = plot_data["avg_messages"].mean()
+        median_value = plot_data["avg_messages"].median()
+        ax.axvline(mean_value, color='red', linestyle='dashed', linewidth=1, label=f'Mean: {mean_value:.2f}')
+        ax.axvline(median_value, color='green', linestyle='dashed', linewidth=1, label=f'Median: {median_value:.2f}')
+        
+        # Add labels and title
+        ax.set_title("Distribution of Average Messages per User")
+        ax.set_xlabel("Average Number of Messages")
+        ax.set_ylabel("Number of Users")
+        ax.grid(True, alpha=0.3)
+        ax.legend()
+        
+        # Add comment box with explanation
+        total_users = len(engagement_df)
+        filtered_users = len(plot_data)
+        filtered_text = ""
+        if max_value is not None and filtered_users < total_users:
+            filtered_text = f"\nNote: {total_users - filtered_users} users with >{max_value} messages are not shown."
+            
+        comment = f"""This histogram shows the distribution of average messages sent by users.
+The x-axis represents the average number of messages per user across all periods.
+The y-axis shows how many users fall into each message count range.
+This helps identify patterns in user engagement and message frequency.{filtered_text}"""
+        props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+        ax.text(0.05, 0.95, comment, transform=ax.transAxes, fontsize=9,
+                verticalalignment='top', bbox=props)
+        
+        plt.tight_layout()
+        
+        if save:
+            output_path = self.output_dir / "message_histogram.png"
+            plt.savefig(output_path)
+            plt.close(fig)
+            return None
+        
+        return fig
+
     def generate_all_trends(self) -> None:
         """Generate all trend graphs and save them to the output directory."""
         self.generate_active_users_trend()
         self.generate_message_volume_trend()
         self.generate_gpt_usage_trend()
-        
+        self.generate_message_histogram()
+
     def get_engagement_levels(self, high_threshold: int = 20, low_threshold: int = 5) -> pd.DataFrame:
         """Categorize users by engagement level based on average message count across all periods.
         

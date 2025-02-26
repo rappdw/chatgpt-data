@@ -44,6 +44,23 @@ def main():
         help="Skip generating report of non-engaged users",
     )
     parser.add_argument(
+        "--only-message-histogram",
+        action="store_true",
+        help="Only generate the message histogram",
+    )
+    parser.add_argument(
+        "--histogram-bins",
+        type=int,
+        default=20,
+        help="Number of bins for the message histogram (default: 20)",
+    )
+    parser.add_argument(
+        "--histogram-max",
+        type=int,
+        default=None,
+        help="Maximum value to include in the message histogram (default: no limit)",
+    )
+    parser.add_argument(
         "--latest-period-only",
         action="store_true",
         help="For non-engaged report, only consider the latest period instead of all periods",
@@ -69,6 +86,20 @@ def main():
     print("Starting comprehensive ChatGPT data analysis...")
     print(f"Input directory: {args.data_dir}")
     print(f"Output directory: {args.output_dir}")
+    
+    # If only message histogram is requested, generate just that
+    if args.only_message_histogram:
+        print("\n=== Generating Message Histogram ===")
+        try:
+            user_analyzer = UserAnalysis(args.data_dir, output_dir)
+            user_analyzer.generate_message_histogram(bins=args.histogram_bins, max_value=args.histogram_max)
+            print(f"✓ Message histogram saved to {output_dir / 'message_histogram.png'}")
+        except Exception as e:
+            print(f"Error generating message histogram: {str(e)}")
+        
+        print("\n=== Analysis Complete ===")
+        print(f"Results saved to {output_dir}")
+        return
     
     # Run user analysis
     if not args.skip_user_trends:
@@ -116,6 +147,7 @@ def main():
     print(f"All results saved to {output_dir}")
     print("Summary of outputs:")
     print("  - User trend graphs: active users, message volume, GPT usage")
+    print("  - Message histogram: distribution of average messages per user")
     print("  - GPT trend graphs: active GPTs, GPT messages, unique GPT messagers")
     print("  - User engagement report (CSV)")
     print("  - Non-engaged users report (CSV)")

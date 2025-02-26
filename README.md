@@ -53,7 +53,7 @@ Options:
 A comprehensive command-line tool that runs both user and GPT analyses in one go. It generates all trend graphs and reports in the data directory.
 
 ```bash
-all_trends [--data-dir DIRECTORY] [--output-dir DIRECTORY] [--skip-user-trends] [--skip-gpt-trends] [--skip-engagement-report] [--skip-non-engaged-report] [--latest-period-only] [--high-threshold N] [--low-threshold N]
+all_trends [--data-dir DIRECTORY] [--output-dir DIRECTORY] [--skip-user-trends] [--skip-gpt-trends] [--skip-engagement-report] [--skip-non-engaged-report] [--only-message-histogram] [--histogram-bins N] [--histogram-max N] [--latest-period-only] [--high-threshold N] [--low-threshold N]
 ```
 
 Options:
@@ -63,6 +63,9 @@ Options:
 - `--skip-gpt-trends`: Skip generating GPT trend graphs
 - `--skip-engagement-report`: Skip generating user engagement level report
 - `--skip-non-engaged-report`: Skip generating report of non-engaged users
+- `--only-message-histogram`: Only generate the message histogram
+- `--histogram-bins`: Number of bins for the message histogram (default: 20)
+- `--histogram-max`: Maximum value to include in the message histogram (default: no limit)
 - `--latest-period-only`: For non-engaged report, only consider the latest period instead of all periods
 - `--high-threshold`: Minimum average number of messages to be considered highly engaged (default: 20)
 - `--low-threshold`: Maximum average number of messages to be considered low engaged (default: 5)
@@ -73,6 +76,7 @@ Options:
 - `active_users_trend.png`: Trend of active users over time
 - `message_volume_trend.png`: Trend of message volume over time
 - `gpt_usage_trend.png`: Trend of GPT usage by users over time
+- `message_histogram.png`: Distribution of average messages sent by users
 
 ### GPT Trends
 - `active_gpts_trend.png`: Trend of active custom GPTs over time
@@ -99,5 +103,3 @@ uv pip install -e ".[dev]"
 ### Run Tests
 ```bash
 pytest
-```
-
