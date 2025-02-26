@@ -101,16 +101,3 @@ uv pip install -e ".[dev]"
 pytest
 ```
 
-### Code Quality
-This project uses:
-- black for code formatting
-- isort for import sorting
-- ruff for code quality checks
-- mypy for type checking
-- flake8 for code style checks
-
-### Continuous Integration
-This project uses GitHub Actions for continuous integration. The workflow includes:
-- Linting with black, isort, ruff, mypy, and flake8
-- Running tests with pytest
-- Building the package
