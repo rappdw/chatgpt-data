@@ -364,17 +364,15 @@ the impact of new GPT features or training initiatives."""
             latest_period = self.user_data["period_end"].max()
             latest_data = self.user_data[self.user_data["period_end"] == latest_period]
             
-            # Filter out pending users
-            active_latest_users = latest_data[latest_data["user_status"] != "pending"]
-            
             # Find users who were not active in the latest period
-            non_engaged_latest = active_latest_users[
-                (active_latest_users["is_active"] == 0) | 
-                (pd.isna(active_latest_users["is_active"]))
+            non_engaged_latest = latest_data[
+                (latest_data["is_active"] == 0) | 
+                (pd.isna(latest_data["is_active"]))
             ]
             
-            # Make sure we have all necessary columns
-            result = non_engaged_latest.copy()
+            # Make sure we have all necessary columns and remove duplicates
+            # This ensures we only have one row per user with their latest status
+            result = non_engaged_latest.drop_duplicates(subset=["account_id", "public_id", "email"]).copy()
             
             return result
         else:
@@ -396,8 +394,16 @@ the impact of new GPT features or training initiatives."""
             )
             never_active = never_active[never_active["_merge"] == "left_only"].drop(["_merge", "name_active"], axis=1, errors="ignore")
             
-            # Get additional user information
-            user_info = self.user_data[["account_id", "public_id", "email", "user_role", "role", "department", "user_status", "created_or_invited_date"]].drop_duplicates()
+            # Get additional user information from the latest period for each user
+            # First, sort by period_end to get the latest data for each user
+            sorted_data = self.user_data.sort_values("period_end", ascending=False)
+            
+            # Then, get the first occurrence of each user (which will be their latest status)
+            user_info = sorted_data[["account_id", "public_id", "email", "user_role", "role", "department", "user_status", "created_or_invited_date"]].drop_duplicates(
+                subset=["account_id", "public_id", "email"]
+            )
+            
+            # Merge with never_active users
             never_active = pd.merge(
                 never_active,
                 user_info,
@@ -430,6 +436,34 @@ the impact of new GPT features or training initiatives."""
             status_counts = non_engaged["user_status"].value_counts().to_dict()
             for status, count in status_counts.items():
                 print(f"  {status}: {count}")
+        
+        # Sort by user_status and created_or_invited_date
+        if 'user_status' in non_engaged.columns and 'created_or_invited_date' in non_engaged.columns:
+            # Convert created_or_invited_date to datetime for proper sorting
+            non_engaged['created_or_invited_date'] = pd.to_datetime(
+                non_engaged['created_or_invited_date'], errors='coerce'
+            )
+            
+            # Define custom sort order for user_status
+            status_order = {
+                'enabled': 0,
+                'pending': 1,
+                'deleted': 2
+            }
+            
+            # Create a helper column for sorting by status
+            non_engaged['status_order'] = non_engaged['user_status'].map(
+                lambda x: status_order.get(x, 999)  # Default high value for unknown statuses
+            )
+            
+            # Sort by status_order and then by created_or_invited_date (oldest first)
+            non_engaged = non_engaged.sort_values(
+                by=['status_order', 'created_or_invited_date'],
+                ascending=[True, True]
+            )
+            
+            # Drop the helper column
+            non_engaged = non_engaged.drop('status_order', axis=1)
         
         # Save to file if specified
         if output_file:
