@@ -377,13 +377,66 @@ This helps identify patterns in user engagement and message frequency.{filtered_
             .reset_index()
         )
         
-        # Rename columns for clarity
+        # Get the created date for each user to calculate periods they could have been active
+        user_created_dates = self.user_data[["public_id", "created_or_invited_date"]].drop_duplicates()
+        user_avg = pd.merge(user_avg, user_created_dates, on="public_id", how="left")
+        
+        # Convert dates to datetime objects for comparison
+        user_avg["first_period_dt"] = pd.to_datetime(user_avg["period_start"])
+        user_avg["last_period_dt"] = pd.to_datetime(user_avg["period_end"])
+        user_avg["created_date"] = pd.to_datetime(user_avg["created_or_invited_date"])
+        
+        # Get all periods in the dataset
+        all_periods = sorted(pd.to_datetime(self.user_data["period_start"].unique()))
+        
+        # Calculate active periods and eligible periods for each user
+        active_eligible_periods = []
+        
+        for _, row in user_avg.iterrows():
+            # Get all periods the user appears in the dataset
+            user_data = self.user_data[self.user_data["public_id"] == row["public_id"]]
+            user_periods = pd.to_datetime(user_data["period_start"].unique())
+            
+            # Count active periods (where is_active=1)
+            active_data = user_data[user_data["is_active"] == 1]
+            active_periods = len(active_data)
+            
+            # Determine eligible periods (periods after user creation)
+            if pd.isna(row["created_date"]):
+                eligible_periods = len(all_periods)
+            else:
+                eligible_periods = sum(1 for period in all_periods if period >= row["created_date"])
+                eligible_periods = max(eligible_periods, 1)  # Ensure we don't divide by zero
+            
+            # Ensure active periods don't exceed eligible periods
+            active_periods = min(active_periods, eligible_periods)
+            
+            active_eligible_periods.append({
+                "public_id": row["public_id"],
+                "active_periods": active_periods,
+                "eligible_periods": eligible_periods
+            })
+        
+        # Convert to DataFrame and merge
+        periods_df = pd.DataFrame(active_eligible_periods)
+        user_avg = user_avg.drop(columns=["is_active"], errors="ignore")
+        user_avg = pd.merge(user_avg, periods_df, on="public_id", how="left")
+        
+        # Calculate active period percentage
+        user_avg["active_period_pct"] = (user_avg["active_periods"] / user_avg["eligible_periods"] * 100).round(1)
+        
+        # Rename columns for clarity and drop temporary columns
         user_avg = user_avg.rename(columns={
             "messages": "avg_messages",
-            "period_start": "first_period",
-            "period_end": "last_period",
-            "is_active": "active_periods"
         })
+        
+        # Drop temporary columns used for calculation
+        user_avg = user_avg.drop(columns=[
+            "created_date", 
+            "created_or_invited_date", 
+            "first_period_dt", 
+            "last_period_dt"
+        ], errors="ignore")
         
         # Add engagement level column based on average message count
         conditions = [
@@ -414,7 +467,21 @@ This helps identify patterns in user engagement and message frequency.{filtered_
         
         # Save to file if specified
         if output_file:
-            user_avg.to_csv(output_file, index=False)
+            # Format avg_messages as a number with fixed decimal places to ensure Excel recognizes it as a number
+            output_df = user_avg.copy()
+            output_df["avg_messages"] = output_df["avg_messages"].round(2)
+            
+            # Create a display name column (use name if available, otherwise email)
+            output_df["display_name"] = output_df["name"].fillna(output_df["email"])
+            
+            # Select only the columns we want to include in the report
+            columns_to_include = [
+                "display_name", "avg_messages", "period_start", "period_end", 
+                "active_periods", "eligible_periods", "active_period_pct", "engagement_level"
+            ]
+            output_df = output_df[columns_to_include]
+            
+            output_df.to_csv(output_file, index=False)
             print(f"Engagement report saved to {output_file}")
             
         return user_avg
@@ -540,7 +607,22 @@ This helps identify patterns in user engagement and message frequency.{filtered_
         
         # Save to file if specified
         if output_file:
-            non_engaged.to_csv(output_file, index=False)
+            # Create a copy for output formatting
+            output_df = non_engaged.copy()
+            
+            # Create a display name column (use name if available, otherwise email)
+            output_df["display_name"] = output_df["name"].fillna(output_df["email"])
+            
+            # Select only the columns we want to include in the report
+            columns_to_include = [
+                "display_name", "user_role", "role", "department", 
+                "user_status", "created_or_invited_date"
+            ]
+            # Only include columns that exist in the DataFrame
+            columns_to_include = [col for col in columns_to_include if col in output_df.columns]
+            
+            output_df = output_df[columns_to_include]
+            output_df.to_csv(output_file, index=False)
             print(f"Non-engagement report saved to {output_file}")
             
         return non_engaged

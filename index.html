@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatGPT Enterprise Engagement Metrics</title>
+    <style>
+        :root {
+            /* Proofpoint brand colors */
+            --pp-orange: #FF6B00;
+            --pp-blue: #0F70C6;
+            --pp-dark-blue: #002E6C;
+            --pp-light-blue: #E5F1FC;
+            --pp-gray: #58595B;
+            --pp-light-gray: #F5F5F5;
+            --pp-dark-gray: #333333;
+            --pp-white: #FFFFFF;
+        }
+        
+        body {
+            font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: var(--pp-white);
+            color: var(--pp-gray);
+        }
+        
+        header {
+            margin-bottom: 20px;
+            padding: 20px;
+            border-bottom: 1px solid var(--pp-light-gray);
+            background-color: var(--pp-dark-blue);
+            color: var(--pp-white);
+            border-radius: 8px 8px 0 0;
+        }
+        
+        h1 {
+            color: var(--pp-white);
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        h2 {
+            color: var(--pp-dark-blue);
+            font-weight: 600;
+        }
+        
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .file-list {
+            flex: 1;
+            background: var(--pp-white);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: 1px solid var(--pp-light-gray);
+        }
+        
+        .file-display {
+            flex: 3;
+            background: var(--pp-white);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            min-height: 500px;
+            overflow: auto;
+            border: 1px solid var(--pp-light-gray);
+        }
+        
+        .file-item {
+            cursor: pointer;
+            padding: 10px;
+            margin-bottom: 4px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            border-left: 3px solid transparent;
+        }
+        
+        .file-item:hover {
+            background-color: var(--pp-light-blue);
+            border-left: 3px solid var(--pp-blue);
+        }
+        
+        .file-item.active {
+            background-color: var(--pp-light-blue);
+            font-weight: bold;
+            border-left: 3px solid var(--pp-blue);
+        }
+        
+        img {
+            max-width: 100%;
+            display: block;
+            border: 1px solid var(--pp-light-gray);
+            border-radius: 4px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        table, th, td {
+            border: 1px solid var(--pp-light-gray);
+        }
+        
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        
+        th {
+            background-color: var(--pp-dark-blue);
+            color: var(--pp-white);
+            font-weight: 600;
+        }
+        
+        tr:nth-child(even) {
+            background-color: var(--pp-light-gray);
+        }
+        
+        .search-container {
+            margin-bottom: 15px;
+        }
+        
+        #search-input {
+            padding: 10px;
+            width: 100%;
+            border: 1px solid var(--pp-light-gray);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+        
+        #search-input:focus {
+            border-color: var(--pp-blue);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(15, 112, 198, 0.2);
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+            align-items: center;
+        }
+        
+        .pagination button {
+            margin: 0 5px;
+            padding: 8px 15px;
+            background-color: var(--pp-blue);
+            color: var(--pp-white);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+        
+        .pagination button:hover {
+            background-color: var(--pp-dark-blue);
+        }
+        
+        .pagination button:disabled {
+            background-color: var(--pp-light-gray);
+            color: var(--pp-gray);
+            cursor: not-allowed;
+        }
+        
+        #page-info {
+            margin: 0 10px;
+            font-weight: 600;
+        }
+        
+        /* Logo styling */
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+        
+        .logo {
+            height: 40px;
+            margin-right: 15px;
+        }
+        
+        .button-container {
+            display: flex;
+            justify-content: flex-end;
+        }
+        
+        .action-button {
+            padding: 10px 20px;
+            background-color: var(--pp-blue);
+            color: var(--pp-white);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+        
+        .action-button:hover {
+            background-color: var(--pp-dark-blue);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo-container">
+            <h1>ChatGPT Enterprise Engagement Metrics</h1>
+        </div>
+        <div class="button-container">
+            <button id="generate-button" class="action-button">Generate</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="file-list">
+            <h2>Available Reports</h2>
+            <div id="files">
+                <div class="file-item" data-file="data/active_gpts_trend.png" data-type="image">Active GPTs Trend</div>
+                <div class="file-item" data-file="data/active_users_trend.png" data-type="image">Active Users Trend</div>
+                <div class="file-item" data-file="data/gpt_messages_trend.png" data-type="image">GPT Messages Trend</div>
+                <div class="file-item" data-file="data/gpt_usage_trend.png" data-type="image">GPT Usage Trend</div>
+                <div class="file-item" data-file="data/message_histogram.png" data-type="image">Message Histogram</div>
+                <div class="file-item" data-file="data/message_volume_trend.png" data-type="image">Message Volume Trend</div>
+                <div class="file-item" data-file="data/unique_messagers_trend.png" data-type="image">Unique Messagers Trend</div>
+                <div class="file-item" data-file="data/non_engaged_users_report.csv" data-type="csv" data-csv="non_engaged_users">Non-Engaged Users Report</div>
+                <div class="file-item" data-file="data/user_engagement_report.csv" data-type="csv" data-csv="user_engagement">User Engagement Report</div>
+            </div>
+        </div>
+
+        <div class="file-display">
+            <h2 id="current-file">Select a report to view</h2>
+            <div id="content"></div>
+        </div>
+    </div>
+
+    <script>
+        // Function to fetch and parse CSV data
+        async function fetchCsvData(url) {
+            try {
+                console.log(`Fetching CSV from ${url}...`);
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
+                }
+                
+                const text = await response.text();
+                console.log(`Successfully fetched ${url}, parsing CSV...`);
+                const result = parseCsv(text);
+                console.log(`Parsed ${result.rows.length} rows from ${url}`);
+                return result;
+            } catch (error) {
+                console.error(`Error fetching CSV data from ${url}:`, error);
+                throw error; // Re-throw to be caught by the caller
+            }
+        }
+        
+        // Function to parse CSV text into headers and rows
+        function parseCsv(csvText) {
+            const lines = csvText.trim().split('\n');
+            if (lines.length === 0) return { headers: [], rows: [] };
+            
+            // Parse headers from the first line
+            const headers = lines[0].split(',').map(header => header.trim().replace(/^"(.*)"$/, '$1'));
+            
+            // Parse rows
+            const rows = [];
+            for (let i = 1; i < lines.length; i++) {
+                // Handle quoted values with commas inside them
+                const row = [];
+                let inQuote = false;
+                let currentValue = '';
+                
+                for (let j = 0; j < lines[i].length; j++) {
+                    const char = lines[i][j];
+                    
+                    if (char === '"' && (j === 0 || lines[i][j-1] !== '\\')) {
+                        inQuote = !inQuote;
+                    } else if (char === ',' && !inQuote) {
+                        row.push(currentValue.trim().replace(/^"(.*)"$/, '$1'));
+                        currentValue = '';
+                    } else {
+                        currentValue += char;
+                    }
+                }
+                
+                // Add the last value
+                row.push(currentValue.trim().replace(/^"(.*)"$/, '$1'));
+                rows.push(row);
+            }
+            
+            return { headers, rows };
+        }
+
+        // Generate sample data for demonstration (kept as fallback)
+        function generateSampleData(baseRow, count, keyField, numericFields = [], sortField = null) {
+            const result = [];
+            const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const engagementLevels = ['high', 'medium', 'low', 'none'];
+            
+            // Add the baseRow as the first row
+            result.push([...baseRow]);
+            
+            for (let i = 1; i < count; i++) {
+                const newRow = [...baseRow];
+                
+                // Change the keyField (name in most cases)
+                if (keyField !== undefined) {
+                    // Generate a random name
+                    const firstName = letters[Math.floor(Math.random() * 26)] + Array(4).fill(0).map(() => 
+                        letters.toLowerCase()[Math.floor(Math.random() * 26)]).join('');
+                    const lastName = letters[Math.floor(Math.random() * 26)] + Array(5).fill(0).map(() => 
+                        letters.toLowerCase()[Math.floor(Math.random() * 26)]).join('');
+                    
+                    newRow[keyField] = `${firstName} ${lastName}`;
+                    
+                    // Change email to match name
+                    const emailField = keyField + 1; // Assume email is the column after name
+                    newRow[emailField] = firstName.toLowerCase() + '.' + lastName.toLowerCase() + '@proofpoint.com';
+                    
+                    // Change user ID
+                    const idFields = [1]; // public_id is usually at index 1
+                    idFields.forEach(field => {
+                        newRow[field] = 'user-' + Array(25).fill(0).map(() => 
+                            letters[Math.floor(Math.random() * 26)]).join('');
+                    });
+                }
+                
+                // Modify numeric fields with variation
+                if (numericFields && numericFields.length > 0) {
+                    numericFields.forEach(field => {
+                        const fieldInfo = field.field;
+                        
+                        if (field.type === 'number') {
+                            // Generate random number in range
+                            const min = field.min || 0;
+                            const max = field.max || 300;
+                            let value;
+                            
+                            if (field.decimals) {
+                                value = (Math.random() * (max - min) + min).toFixed(field.decimals);
+                            } else {
+                                value = Math.floor(Math.random() * (max - min + 1)) + min;
+                            }
+                            
+                            newRow[fieldInfo] = value.toString();
+                        } else if (field.type === 'date') {
+                            // Keep dates as they are
+                        } else if (field.type === 'enum' && field.values) {
+                            // Pick a random value from the enum
+                            newRow[fieldInfo] = field.values[Math.floor(Math.random() * field.values.length)];
+                        }
+                    });
+                    
+                    // Special case for user_engagement report - set engagement level based on avg_messages
+                    if (numericFields.some(f => f.field === 4)) { // avg_messages at index 4
+                        const avgMessages = parseFloat(newRow[4]);
+                        if (avgMessages > 100) {
+                            newRow[10] = 'high';
+                        } else if (avgMessages > 30) {
+                            newRow[10] = 'medium';
+                        } else if (avgMessages > 5) {
+                            newRow[10] = 'low';
+                        } else {
+                            newRow[10] = 'none';
+                        }
+                        
+                        // Set active_periods and eligible_periods based on engagement level
+                        if (newRow[10] === 'high') {
+                            newRow[7] = '6'; // active_periods
+                            newRow[8] = '6'; // eligible_periods
+                            newRow[9] = '100.0'; // active_period_pct
+                        } else if (newRow[10] === 'medium') {
+                            const active = Math.floor(Math.random() * 3) + 3; // 3-5
+                            newRow[7] = active.toString();
+                            newRow[8] = '6';
+                            newRow[9] = ((active / 6) * 100).toFixed(1);
+                        } else if (newRow[10] === 'low') {
+                            const active = Math.floor(Math.random() * 2) + 1; // 1-2
+                            newRow[7] = active.toString();
+                            newRow[8] = '6';
+                            newRow[9] = ((active / 6) * 100).toFixed(1);
+                        } else {
+                            newRow[7] = '0';
+                            newRow[8] = '6';
+                            newRow[9] = '0.0';
+                        }
+                    }
+                }
+                
+                result.push(newRow);
+            }
+            
+            // Sort the data if requested
+            if (sortField !== null) {
+                // Keep the header row at the top
+                const header = result.shift();
+                
+                // Sort by the specified field
+                result.sort((a, b) => {
+                    // Handle numeric sorting
+                    if (sortField.type === 'number') {
+                        return parseFloat(b[sortField.field]) - parseFloat(a[sortField.field]);
+                    }
+                    
+                    // Handle engagement level sorting
+                    if (sortField.field === 10) { // engagement_level
+                        const levelOrder = { 'high': 0, 'medium': 1, 'low': 2, 'none': 3 };
+                        return levelOrder[a[sortField.field]] - levelOrder[b[sortField.field]];
+                    }
+                    
+                    // Default string sorting
+                    return a[sortField.field].localeCompare(b[sortField.field]);
+                });
+                
+                // Put the header back
+                result.unshift(header);
+            }
+            
+            return result;
+        }
+
+        // Pre-loaded CSV data (will be replaced with actual data)
+        let csvData = {
+            non_engaged_users: { headers: [], rows: [] },
+            user_engagement: { headers: [], rows: [] }
+        };
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Fetch the actual CSV data
+            try {
+                console.log('Attempting to fetch CSV data...');
+                csvData.non_engaged_users = await fetchCsvData('data/non_engaged_users_report.csv');
+                csvData.user_engagement = await fetchCsvData('data/user_engagement_report.csv');
+                console.log('CSV data loaded successfully:', csvData);
+            } catch (error) {
+                console.error('Error loading CSV data:', error);
+                // Fall back to sample data if loading fails
+                csvData.non_engaged_users = {
+                    headers: ["display_name", "user_role", "role", "department", "user_status", "created_or_invited_date"],
+                    rows: generateSampleData(
+                        ["Doug Dexter", "account-owner", "team_member", "[\"other\"]", "enabled", "2024-11-05"],
+                        100, 0
+                    )
+                };
+                csvData.user_engagement = {
+                    headers: ["display_name", "avg_messages", "period_start", "period_end", "active_periods", "eligible_periods", "active_period_pct", "engagement_level"],
+                    rows: generateSampleData(
+                        ["Sebastian Coe", "263.0", "2025-01-12", "2025-02-22", "6", "6", "100.0", "high"],
+                        150, 0,
+                        [
+                            { field: 1, type: 'number', min: 0, max: 300, decimals: 1 } // avg_messages
+                        ],
+                        { field: 1, type: 'number' } // Sort by avg_messages in descending order
+                    )
+                };
+            }
+
+            const fileItems = document.querySelectorAll('.file-item');
+            const contentDiv = document.getElementById('content');
+            const currentFileTitle = document.getElementById('current-file');
+            
+            fileItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    // Remove active class from all items
+                    fileItems.forEach(i => i.classList.remove('active'));
+                    
+                    // Add active class to clicked item
+                    item.classList.add('active');
+                    
+                    const fileName = item.getAttribute('data-file');
+                    const fileType = item.getAttribute('data-type');
+                    const csvId = item.getAttribute('data-csv');
+                    
+                    currentFileTitle.textContent = item.textContent;
+                    
+                    if (fileType === 'image') {
+                        contentDiv.innerHTML = `<img src="${fileName}" alt="${fileName}">`;
+                    } else if (fileType === 'csv' && csvId && csvData[csvId]) {
+                        renderCsvData(csvData[csvId], csvId);
+                    }
+                });
+            });
+
+            function renderCsvData(data, csvId) {
+                const { headers, rows } = data;
+                
+                // Create search box
+                let html = `
+                <div class="search-container">
+                    <input type="text" id="search-input" placeholder="Search in ${csvId.replace('_', ' ')}..." data-csv-id="${csvId}">
+                </div>`;
+                
+                // Create table
+                html += '<table id="data-table">';
+                
+                // Add headers
+                html += '<thead><tr>';
+                headers.forEach(header => {
+                    html += `<th>${header}</th>`;
+                });
+                html += '</tr></thead>';
+                
+                // Add data rows
+                html += '<tbody>';
+                
+                // Show first 10 rows initially
+                const rowsToShow = rows.slice(0, 10);
+                rowsToShow.forEach(row => {
+                    html += '<tr>';
+                    row.forEach(cell => {
+                        html += `<td>${cell}</td>`;
+                    });
+                    html += '</tr>';
+                });
+                
+                html += '</tbody></table>';
+                
+                // Add pagination controls
+                if (rows.length > 10) {
+                    html += `
+                    <div class="pagination">
+                        <button id="prev-page" disabled>Previous</button>
+                        <span id="page-info">Page 1 of ${Math.ceil(rows.length / 10)}</span>
+                        <button id="next-page">Next</button>
+                    </div>`;
+                }
+                
+                contentDiv.innerHTML = html;
+                
+                // Add event listener for search
+                document.getElementById('search-input').addEventListener('input', function() {
+                    const searchTerm = this.value.toLowerCase();
+                    const csvId = this.getAttribute('data-csv-id');
+                    const allRows = csvData[csvId].rows;
+                    
+                    const filteredRows = allRows.filter(row => 
+                        row.some(cell => cell.toString().toLowerCase().includes(searchTerm))
+                    );
+                    
+                    updateTable(filteredRows, 0);
+                    updatePagination(filteredRows);
+                });
+                
+                // Set up pagination
+                if (rows.length > 10) {
+                    setupPagination(rows);
+                }
+            }
+            
+            function setupPagination(rows) {
+                const nextBtn = document.getElementById('next-page');
+                const prevBtn = document.getElementById('prev-page');
+                if (!nextBtn || !prevBtn) return;
+                
+                let currentPage = 0;
+                const totalPages = Math.ceil(rows.length / 10);
+                
+                nextBtn.addEventListener('click', () => {
+                    currentPage++;
+                    updateTable(rows, currentPage);
+                    updatePaginationControls(currentPage, totalPages);
+                });
+                
+                prevBtn.addEventListener('click', () => {
+                    currentPage--;
+                    updateTable(rows, currentPage);
+                    updatePaginationControls(currentPage, totalPages);
+                });
+                
+                // Initialize pagination controls
+                updatePaginationControls(currentPage, totalPages);
+            }
+            
+            function updateTable(rows, page) {
+                const tableBody = document.querySelector('#data-table tbody');
+                const start = page * 10;
+                const end = start + 10;
+                const rowsToShow = rows.slice(start, end);
+                
+                let html = '';
+                rowsToShow.forEach(row => {
+                    html += '<tr>';
+                    row.forEach(cell => {
+                        html += `<td>${cell}</td>`;
+                    });
+                    html += '</tr>';
+                });
+                
+                tableBody.innerHTML = html;
+            }
+            
+            function updatePaginationControls(currentPage, totalPages) {
+                const pageInfo = document.getElementById('page-info');
+                const prevBtn = document.getElementById('prev-page');
+                const nextBtn = document.getElementById('next-page');
+                
+                if (!pageInfo || !prevBtn || !nextBtn) return;
+                
+                pageInfo.textContent = `Page ${currentPage + 1} of ${totalPages}`;
+                prevBtn.disabled = currentPage === 0;
+                nextBtn.disabled = currentPage === totalPages - 1;
+            }
+            
+            function updatePagination(rows) {
+                const totalPages = Math.ceil(rows.length / 10);
+                updatePaginationControls(0, totalPages);
+                setupPagination(rows);
+            }
+
+            // Add event listener for the Generate button
+            const generateButton = document.getElementById('generate-button');
+            if (generateButton) {
+                generateButton.addEventListener('click', async function() {
+                    try {
+                        this.disabled = true;
+                        this.textContent = 'Generating...';
+                        
+                        console.log('Running all_trends command...');
+                        const response = await fetch('/run-command', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ command: 'all_trends' }),
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`Command failed: ${response.status} ${response.statusText}`);
+                        }
+                        
+                        const result = await response.json();
+                        console.log('Command result:', result);
+                        
+                        // Refresh the page to show new data
+                        window.location.reload();
+                    } catch (error) {
+                        console.error('Error running command:', error);
+                        alert('Error generating trends: ' + error.message);
+                    } finally {
+                        this.disabled = false;
+                        this.textContent = 'Generate';
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

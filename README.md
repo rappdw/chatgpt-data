@@ -22,6 +22,24 @@ pip install -e .
 
 ## CLI Commands
 
+### get_usage_data
+A command-line tool that fetches ChatGPT usage data via the Enterprise Compliance API and saves it to the rawdata directory.
+
+```bash
+get_usage_data [--api-key API_KEY] [--org-id ORG_ID] [--output-dir DIRECTORY] [--start-date DATE] [--end-date DATE] [--skip-user-report] [--skip-gpt-report] [--run-analysis] [--analysis-output-dir DIRECTORY]
+```
+
+Options:
+- `--api-key`: Enterprise API key (defaults to OPENAI_ENTERPRISE_API_KEY env var)
+- `--org-id`: Organization ID (defaults to OPENAI_ORG_ID env var)
+- `--output-dir`: Directory to save downloaded reports (default: ./rawdata)
+- `--start-date`: Start date in YYYY-MM-DD format (default: previous Sunday)
+- `--end-date`: End date in YYYY-MM-DD format (default: previous Saturday)
+- `--skip-user-report`: Skip downloading user engagement report
+- `--skip-gpt-report`: Skip downloading GPT engagement report
+- `--run-analysis`: Run data analysis after downloading reports
+- `--analysis-output-dir`: Directory to save analysis output (default: ./data)
+
 ### user_trends
 A command-line tool that provides analysis of ChatGPT user trends. It generates trend graphs (PNG files) in the data directory.
 
@@ -87,6 +105,7 @@ Options:
 
 ### User Engagement Reports
 - `user_engagement_report.csv`: Report of user engagement levels (high, medium, low, none) based on average message count across all periods
+  - Includes active period percentage (active periods / eligible periods since user creation)
 - `non_engaged_users_report.csv`: Report of users who have never engaged (either across all tracked periods or only in the latest period, depending on the `--latest-period-only` option)
 
 ## Development
