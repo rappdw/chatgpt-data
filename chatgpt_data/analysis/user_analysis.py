@@ -379,7 +379,7 @@ This helps identify patterns in user engagement and message frequency.{filtered_
         
         # Get the created date for each user to calculate periods they could have been active
         user_created_dates = self.user_data[["public_id", "created_or_invited_date"]].drop_duplicates()
-        user_avg = pd.merge(user_avg, user_created_dates, on="public_id", how="left")
+        user_avg = pd.merge(user_created_dates, user_avg, on="public_id", how="left")
         
         # Convert dates to datetime objects for comparison
         user_avg["first_period_dt"] = pd.to_datetime(user_avg["period_start"])

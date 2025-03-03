@@ -4,10 +4,14 @@ import argparse
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Tuple, Dict, Set, Any
+from dataclasses import dataclass, field
+import csv
+import re
 
 from chatgpt_data.api.compliance_api import EnterpriseComplianceAPI
 from chatgpt_data.cli.all_trends import main as run_all_trends
+from dotenv import load_dotenv
 
 
 def parse_date(date_str: str) -> datetime:
@@ -25,22 +29,271 @@ def parse_date(date_str: str) -> datetime:
         raise argparse.ArgumentTypeError(f"Invalid date format: {date_str}. Use YYYY-MM-DD")
 
 
-def get_default_dates() -> tuple[datetime, datetime]:
-    """Get default date range (previous week).
+def get_default_dates() -> Tuple[datetime, datetime]:
+    """Get default start and end dates for reports.
 
     Returns:
-        Tuple of (start_date, end_date)
+        Tuple of (start_date, end_date) as datetime objects
     """
-    today = datetime.now()
-    # Start from last Saturday
-    days_since_saturday = (today.weekday() + 2) % 7
-    end_date = today - timedelta(days=days_since_saturday)
-    start_date = end_date - timedelta(days=6)  # Previous Sunday to Saturday
+    # Default end date is today
+    end_date = datetime.now()
+    
+    # Default start date is 7 days ago
+    start_date = end_date - timedelta(days=7)
+    
+    # Set time to midnight for consistent behavior
+    start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+    
     return start_date, end_date
+
+
+def datetime_to_unix_timestamp(dt: datetime) -> int:
+    """Convert a datetime object to a Unix timestamp.
+
+    Args:
+        dt: Datetime object to convert
+
+    Returns:
+        Unix timestamp (seconds since epoch)
+    """
+    return int(dt.timestamp())
+
+
+@dataclass
+class UserActivity:
+    conversation_count: int = 0
+    message_count: int = 0
+    gpt_message_count: int = 0
+    gpt_set: Set[str] = field(default_factory=set)
+    tool_message_count: int = 0
+    tool_set: Set[str] = field(default_factory=set)
+    project_message_count: int = 0
+    project_set: Set[str] = field(default_factory=set)
+    system_message_count: int = 0
+    assistant_message_count: int = 0
+    last_day_active: int = 0
+
+
+@dataclass
+class EngagementMetrics:
+    users: Dict[str, Any]
+    user_activity: Dict[str, UserActivity] = field(default_factory=dict)
+    gpts: Dict[str, Any] = field(default_factory=dict)
+    projects: Dict[str, Any] = field(default_factory=dict)
+
+
+def get_user_engagement(api: EnterpriseComplianceAPI, start_date: datetime, end_date: datetime) -> EngagementMetrics:
+    """
+    Get user engagement metrics by processing all conversations.
+    
+    Args:
+        api: The EnterpriseComplianceAPI instance
+        start_date: The start date for the engagement period
+        end_date: The end date for the engagement period
+    
+    Returns:
+        An EngagementMetrics object with user engagement data
+    """
+    print("\nCalculating user engagement metrics...")
+    
+    # Get all users
+    users_dict = api.get_all_users()
+    print(f"Retrieved {len(users_dict)} users for engagement analysis")
+
+    # Initialize engagement metrics
+    engagement_metrics = EngagementMetrics(users=users_dict)
+    
+    # Determine timestamp filter if start_date is provided
+    since_timestamp = datetime_to_unix_timestamp(start_date)
+    before_timestamp = datetime_to_unix_timestamp(end_date)
+    
+    # Process all conversations with a callback function
+    def process_conversation(conversation):
+        last_active = conversation.get("last_active_at")
+        if not last_active or last_active < since_timestamp:
+            return
+
+        # Get user ID
+        user_id = conversation.get("user_id")
+        
+        # Initialize user metrics if not already present
+        if user_id not in engagement_metrics.user_activity:
+            engagement_metrics.user_activity[user_id] = UserActivity()
+            
+        # Update user metrics
+        user_metrics = engagement_metrics.user_activity[user_id]
+
+        # Get messages
+        messages = conversation.get("messages", {}).get("data", [])
+
+        convo_in_range = False
+        # iterate messages, skip any that are not in the specified date range
+        for msg in messages:
+            created_at = msg.get("created_at")
+            if not created_at or created_at < since_timestamp or created_at > before_timestamp:
+                continue
+            convo_in_range = True
+            user_metrics.message_count += 1
+            if user_metrics.last_day_active < created_at:
+                user_metrics.last_day_active = created_at
+
+            gpt_id = msg.get("gpt_id")
+            project_id = msg.get("project_id")
+            role = msg.get("author", {}).get("role")
+            tool_name = msg.get("author", {}).get("tool_name")
+            
+            if gpt_id:
+                user_metrics.gpt_message_count += 1
+                user_metrics.gpt_set.add(gpt_id)
+                if gpt_id not in engagement_metrics.gpts:
+                    gpt_builder_name = api.get_gpt_name(gpt_id)
+                    engagement_metrics.gpts[gpt_id] = gpt_builder_name
+            if project_id:
+                user_metrics.project_message_count += 1
+                user_metrics.project_set.add(project_id)
+                if project_id not in engagement_metrics.projects:
+                    project_name = api.get_project_name(project_id)
+                    engagement_metrics.projects[project_id] = project_name
+            if role == "assistant":
+                user_metrics.assistant_message_count += 1
+            if role == "system":
+                user_metrics.system_message_count += 1
+            if role == "tool" and tool_name:
+                user_metrics.tool_message_count += 1
+                user_metrics.tool_set.add(tool_name)
+        
+        if convo_in_range:
+            user_metrics.conversation_count += 1
+            
+    
+    # Process all conversations
+    api.process_all_conversations(
+        callback_fn=process_conversation,
+        since_timestamp=since_timestamp
+    )
+    
+    return engagement_metrics
+
+
+def save_engagement_metrics_to_csv(metrics: EngagementMetrics, output_file: str, end_date: Optional[datetime] = None) -> None:
+    """Save user engagement metrics to a CSV file.
+    
+    Args:
+        metrics: EngagementMetrics object with user activity data
+        output_file: Path to output CSV file
+        end_date: Optional end date of the reporting period. If provided, users created after this date
+                 will be excluded from the non-engaged users report.
+        
+    This function creates two CSV files:
+    1. The main engagement metrics file with the name provided in output_file
+    2. A non-engagement file for users who had no activity during the reporting period
+       with the name pattern: non_engagement_YYYYMMDD_YYYYMMDD.csv
+    """
+    # Create rows for active users
+    active_rows = []
+    
+    # Convert user activity data to rows
+    for user_id, activity in metrics.user_activity.items():
+        # Get user info - handle the case when user might be None
+        user = metrics.users.get(user_id)
+        
+        # Convert GPT IDs to names
+        gpt_names = [metrics.gpts.get(gpt_id, str(gpt_id)) for gpt_id in activity.gpt_set if gpt_id is not None]
+        
+        # Convert project IDs to names
+        project_names = [metrics.projects.get(project_id, str(project_id)) for project_id in activity.project_set if project_id is not None]
+        
+        # Convert tool IDs to names (no mapping needed)
+        tool_names = [str(tool_id) for tool_id in activity.tool_set if tool_id is not None]
+        
+        row = {
+            "user_id": user_id,
+            "email": getattr(user, 'email', "") if user else "",
+            "name": getattr(user, 'name', "") if user else "",
+            "role": getattr(user, 'role', "") if user else "",
+            "status": getattr(user, 'status', "") if user else "",
+            "conversation_count": activity.conversation_count,
+            "message_count": activity.message_count,
+            "user_message_count": activity.message_count - (activity.assistant_message_count + activity.gpt_message_count + activity.project_message_count + activity.system_message_count + activity.tool_message_count),
+            "assistant_message_count": activity.assistant_message_count,
+            "gpt_message_count": activity.gpt_message_count,
+            "project_message_count": activity.project_message_count,
+            "system_message_count": activity.system_message_count,
+            "tool_message_count": activity.tool_message_count,
+            "last_active": datetime.fromtimestamp(activity.last_day_active).strftime("%Y-%m-%d %H:%M:%S") if activity.last_day_active else "",
+            "unique_gpt_models": len(activity.gpt_set),
+            "unique_tools": len(activity.tool_set),
+            "unique_projects": len(activity.project_set),
+            "gpt_models": ",".join(gpt_names) if gpt_names else "",
+            "tools": ",".join(tool_names) if tool_names else "",
+            "projects": ",".join(project_names) if project_names else "",
+        }
+        active_rows.append(row)
+    
+    # Sort rows by message count (descending)
+    active_rows.sort(key=lambda x: x["message_count"], reverse=True)
+    
+    # Write to CSV
+    if active_rows:
+        with open(output_file, 'w', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=active_rows[0].keys())
+            writer.writeheader()
+            writer.writerows(active_rows)
+        print(f"Saved engagement metrics for {len(active_rows)} users to {output_file}")
+    else:
+        print("No user engagement data to save")
+    
+    # Create a second CSV for non-engaged users
+    # Extract date range from the output filename for the non-engagement filename
+    base_filename = os.path.basename(output_file)
+    date_parts = re.findall(r'\d{8}', base_filename)
+    date_suffix = "_".join(date_parts) if date_parts else "report"
+    
+    non_engagement_file = os.path.join(os.path.dirname(output_file), f"non_engagement_{date_suffix}.csv")
+    
+    # Calculate end timestamp if end_date is provided
+    end_timestamp = None
+    if end_date:
+        end_timestamp = datetime_to_unix_timestamp(end_date)
+    
+    # Find users who were not active during the reporting period
+    non_engaged_rows = []
+    for user_id, user in metrics.users.items():
+        # Skip users who were created after the reporting period
+        if end_timestamp and hasattr(user, 'created_at') and user.created_at > end_timestamp:
+            continue
+            
+        if user_id not in metrics.user_activity:
+            row = {
+                "user_id": user_id,
+                "email": getattr(user, 'email', "") if user else "",
+                "name": getattr(user, 'name', "") if user else "",
+                "role": getattr(user, 'role', "") if user else "",
+                "status": getattr(user, 'status', "") if user else "",
+                "created_at": datetime.fromtimestamp(user.created_at).strftime("%Y-%m-%d %H:%M:%S") if hasattr(user, 'created_at') and user.created_at else "",
+            }
+            non_engaged_rows.append(row)
+    
+    # Sort non-engaged rows by name
+    non_engaged_rows.sort(key=lambda x: x["name"])
+    
+    # Write non-engaged users to CSV
+    if non_engaged_rows:
+        with open(non_engagement_file, 'w', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=non_engaged_rows[0].keys())
+            writer.writeheader()
+            writer.writerows(non_engaged_rows)
+        print(f"Saved non-engagement data for {len(non_engaged_rows)} users to {non_engagement_file}")
+    else:
+        print("No non-engaged users to report")
 
 
 def main() -> None:
     """Main entry point for the CLI tool."""
+    # Load environment variables from .env file if it exists
+    load_dotenv()
+    
     parser = argparse.ArgumentParser(
         description="Fetch ChatGPT usage reports via the Enterprise Compliance API"
     )
@@ -53,6 +306,10 @@ def main() -> None:
     parser.add_argument(
         "--org-id", 
         help="Organization ID (defaults to OPENAI_ORG_ID env var)"
+    )
+    parser.add_argument(
+        "--workspace-id", 
+        help="Workspace ID (defaults to OPENAI_WORKSPACE_ID env var)"
     )
     parser.add_argument(
         "--output-dir", 
@@ -75,18 +332,6 @@ def main() -> None:
         help=f"End date (YYYY-MM-DD) (default: {default_end.strftime('%Y-%m-%d')})"
     )
     
-    # Report options
-    parser.add_argument(
-        "--skip-user-report",
-        action="store_true",
-        help="Skip downloading user engagement report"
-    )
-    parser.add_argument(
-        "--skip-gpt-report",
-        action="store_true",
-        help="Skip downloading GPT engagement report"
-    )
-    
     # Analysis options
     parser.add_argument(
         "--run-analysis",
@@ -99,61 +344,112 @@ def main() -> None:
         help="Directory to save analysis output (default: ./data)"
     )
     
-    args = parser.parse_args()
-    
-    # Initialize API client
-    api = EnterpriseComplianceAPI(
-        api_key=args.api_key,
-        org_id=args.org_id,
-        output_dir=args.output_dir
+    # Add page_size parameter
+    parser.add_argument(
+        "--page-size",
+        type=int,
+        default=200,
+        help="Number of items to request per API page (default: 200, max: 200)"
     )
     
-    downloaded_files = []
+    args = parser.parse_args()
     
-    # Download reports
-    if not args.skip_user_report:
+    # Run the command
+    try:
+        # Initialize API client
+        api_key = args.api_key or os.environ.get("API_KEY")
+        org_id = args.org_id or os.environ.get("ORG_ID")
+        workspace_id = args.workspace_id or os.environ.get("WORKSPACE_ID")
+        
+        # Validate required credentials
+        missing_credentials = False
+        if not api_key:
+            print("ERROR: API key is required. Provide via --api-key or API_KEY env var")
+            missing_credentials = True
+            
+        if not org_id:
+            print("WARNING: Organization ID not provided. Using default value")
+            org_id = "org_default"
+            
+        if not workspace_id:
+            print("WARNING: Workspace ID not provided. Using default value")
+            workspace_id = "05a09bbb-00b5-4224-bee8-739bb86ec062"
+        
+        if missing_credentials:
+            print("\nExiting due to missing credentials")
+            return 1
+        
+        # Initialize the API client
+        api = EnterpriseComplianceAPI(
+            api_key=api_key,
+            org_id=org_id,
+            workspace_id=workspace_id,
+            output_dir=args.output_dir,
+            page_size=min(args.page_size, 200)  # Ensure page_size doesn't exceed API limit
+        )
+        
+        # Print date range
+        print(f"Date range: {args.start_date.strftime('%Y-%m-%d')} to {args.end_date.strftime('%Y-%m-%d')}")
+        
+        # Download reports
+        downloaded_files = []
+        
+        # Get users data
         try:
-            user_report_path = api.get_user_engagement_report(
-                start_date=args.start_date,
+            # Get user engagement metrics
+            engagement_metrics = get_user_engagement(api, args.start_date, args.end_date)
+            
+            # Save engagement metrics to CSV
+            output_file = os.path.join(args.output_dir, f"user_engagement_{args.start_date.strftime('%Y%m%d')}_{args.end_date.strftime('%Y%m%d')}.csv")
+            save_engagement_metrics_to_csv(
+                metrics=engagement_metrics,
+                output_file=output_file,
                 end_date=args.end_date
             )
-            print(f"Downloaded user engagement report: {user_report_path}")
-            downloaded_files.append(user_report_path)
-        except Exception as e:
-            print(f"Error downloading user engagement report: {str(e)}")
-    
-    if not args.skip_gpt_report:
-        try:
-            gpt_report_path = api.get_gpt_engagement_report(
-                start_date=args.start_date,
-                end_date=args.end_date
-            )
-            print(f"Downloaded GPT engagement report: {gpt_report_path}")
-            downloaded_files.append(gpt_report_path)
-        except Exception as e:
-            print(f"Error downloading GPT engagement report: {str(e)}")
-    
-    # Run analysis if requested
-    if args.run_analysis and downloaded_files:
-        print("Running data analysis...")
-        try:
-            # Use modified sys.argv to call all_trends with the right parameters
-            import sys
-            original_argv = sys.argv.copy()
-            sys.argv = [
-                "all_trends",
-                "--data-dir", args.output_dir,
-                "--output-dir", args.analysis_output_dir
-            ]
+            downloaded_files.append(output_file)
             
-            run_all_trends()
-            
-            # Restore original argv
-            sys.argv = original_argv
-            
-            print(f"Analysis complete. Results saved to {args.analysis_output_dir}")
         except Exception as e:
-            print(f"Error running analysis: {str(e)}")
+            print(f"Error fetching workspace users: {str(e)}")
+            print("This could be due to:")
+            print("  - Invalid API credentials")
+            print("  - Insufficient permissions for the compliance API")
+            print("  - Network connectivity issues")
+            print("  - API rate limiting")
+        
+        # Run analysis if requested
+        if args.run_analysis and downloaded_files:
+            print("Running data analysis...")
+            try:
+                # Use modified sys.argv to call all_trends with the right parameters
+                import sys
+                original_argv = sys.argv.copy()
+                sys.argv = [
+                    "all_trends",
+                    "--data-dir", args.output_dir,
+                    "--output-dir", args.analysis_output_dir
+                ]
+                
+                run_all_trends()
+                
+                # Restore original argv
+                sys.argv = original_argv
+                
+                print(f"Analysis complete. Results saved to {args.analysis_output_dir}")
+            except Exception as e:
+                print(f"Error running analysis: {str(e)}")
+        
+        if downloaded_files:
+            print("\nDownloaded files:")
+            for file_path in downloaded_files:
+                print(f"  - {file_path}")
+        
+        print("\nNote: If you're experiencing API rate limiting, try using a smaller page size:")
+        print("  python -m chatgpt_data.cli.api_reports --page-size 50")
+        
+        return 0
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+        return 1
 
 
 if __name__ == "__main__":
