@@ -64,6 +64,7 @@ def datetime_to_unix_timestamp(dt: datetime) -> int:
 class UserActivity:
     conversation_count: int = 0
     message_count: int = 0
+    user_message_count: int = 0
     gpt_message_count: int = 0
     gpt_set: Set[str] = field(default_factory=set)
     tool_message_count: int = 0
@@ -83,7 +84,7 @@ class EngagementMetrics:
     projects: Dict[str, Any] = field(default_factory=dict)
 
 
-def get_user_engagement(api: EnterpriseComplianceAPI, start_date: datetime, end_date: datetime) -> EngagementMetrics:
+def get_user_engagement(api: EnterpriseComplianceAPI, start_date: datetime, end_date: datetime, debug_logging: bool = False) -> EngagementMetrics:
     """
     Get user engagement metrics by processing all conversations.
     
@@ -91,6 +92,7 @@ def get_user_engagement(api: EnterpriseComplianceAPI, start_date: datetime, end_
         api: The EnterpriseComplianceAPI instance
         start_date: The start date for the engagement period
         end_date: The end date for the engagement period
+        debug_logging: Whether to print detailed debug logs
     
     Returns:
         An EngagementMetrics object with user engagement data
@@ -108,14 +110,28 @@ def get_user_engagement(api: EnterpriseComplianceAPI, start_date: datetime, end_
     since_timestamp = datetime_to_unix_timestamp(start_date)
     before_timestamp = datetime_to_unix_timestamp(end_date)
     
+    if debug_logging:
+        print(f"Date range: {start_date.isoformat()} to {end_date.isoformat()}")
+        print(f"Timestamp range: {since_timestamp} to {before_timestamp}")
+    
+    # Track conversation and message counts for verification
+    total_conversations = 0
+    total_conversations_in_range = 0
+    total_messages = 0
+    total_messages_in_range = 0
+    
     # Process all conversations with a callback function
     def process_conversation(conversation):
-        last_active = conversation.get("last_active_at")
-        if not last_active or last_active < since_timestamp:
-            return
-
-        # Get user ID
+        nonlocal total_conversations, total_conversations_in_range, total_messages, total_messages_in_range
+        
+        total_conversations += 1
+        conversation_id = conversation.get("id", "unknown")
         user_id = conversation.get("user_id")
+        last_active = conversation.get("last_active_at")
+        
+        if debug_logging:
+            print(f"\nProcessing conversation: {conversation_id} for user: {user_id}")
+            print(f"  Last active: {last_active} ({datetime.fromtimestamp(last_active).isoformat() if last_active else 'None'})")
         
         # Initialize user metrics if not already present
         if user_id not in engagement_metrics.user_activity:
@@ -126,13 +142,27 @@ def get_user_engagement(api: EnterpriseComplianceAPI, start_date: datetime, end_
 
         # Get messages
         messages = conversation.get("messages", {}).get("data", [])
-
+        
+        if debug_logging:
+            print(f"  Found {len(messages)} messages in conversation")
+        
         convo_in_range = False
         # iterate messages, skip any that are not in the specified date range
         for msg in messages:
+            total_messages += 1
+            
+            msg_id = msg.get("id", "unknown")
             created_at = msg.get("created_at")
+            
+            if debug_logging:
+                print(f"  Message {msg_id} created at: {created_at} ({datetime.fromtimestamp(created_at).isoformat() if created_at else 'None'})")
+            
             if not created_at or created_at < since_timestamp or created_at > before_timestamp:
+                if debug_logging:
+                    print(f"    Skipping message: outside date range")
                 continue
+                
+            total_messages_in_range += 1
             convo_in_range = True
             user_metrics.message_count += 1
             if user_metrics.last_day_active < created_at:
@@ -143,6 +173,13 @@ def get_user_engagement(api: EnterpriseComplianceAPI, start_date: datetime, end_
             role = msg.get("author", {}).get("role")
             tool_name = msg.get("author", {}).get("tool_name")
             
+            if debug_logging:
+                print(f"    Message role: {role}, GPT: {gpt_id}, Project: {project_id}, Tool: {tool_name}")
+            
+            # Explicitly track user messages
+            if role == "user":
+                user_metrics.user_message_count += 1
+                
             if gpt_id:
                 user_metrics.gpt_message_count += 1
                 user_metrics.gpt_set.add(gpt_id)
@@ -164,14 +201,24 @@ def get_user_engagement(api: EnterpriseComplianceAPI, start_date: datetime, end_
                 user_metrics.tool_set.add(tool_name)
         
         if convo_in_range:
+            total_conversations_in_range += 1
             user_metrics.conversation_count += 1
-            
+            if debug_logging:
+                print(f"  Conversation in range: Yes")
+        elif debug_logging:
+            print(f"  Conversation in range: No")
     
     # Process all conversations
     api.process_all_conversations(
         callback_fn=process_conversation,
-        since_timestamp=since_timestamp
+        since_timestamp=since_timestamp,
+        debug_logging=debug_logging
     )
+    
+    # Print summary statistics for verification
+    print(f"\nProcessed {total_conversations} total conversations ({total_conversations_in_range} in date range)")
+    print(f"Processed {total_messages} total messages ({total_messages_in_range} in date range)")
+    print(f"Found {len(engagement_metrics.user_activity)} users with activity in the date range")
     
     return engagement_metrics
 
@@ -215,7 +262,7 @@ def save_engagement_metrics_to_csv(metrics: EngagementMetrics, output_file: str,
             "status": getattr(user, 'status', "") if user else "",
             "conversation_count": activity.conversation_count,
             "message_count": activity.message_count,
-            "user_message_count": activity.message_count - (activity.assistant_message_count + activity.gpt_message_count + activity.project_message_count + activity.system_message_count + activity.tool_message_count),
+            "user_message_count": activity.user_message_count,
             "assistant_message_count": activity.assistant_message_count,
             "gpt_message_count": activity.gpt_message_count,
             "project_message_count": activity.project_message_count,
@@ -299,46 +346,53 @@ def main() -> None:
     )
     
     # Data options
-    parser.add_argument(
-        "--api-key", 
-        help="Enterprise API key (defaults to OPENAI_ENTERPRISE_API_KEY env var)"
+    data_group = parser.add_argument_group("Data Options")
+    data_group.add_argument(
+        "--workspace-id",
+        help="Workspace ID to fetch data from (default: from environment variable)",
     )
-    parser.add_argument(
-        "--org-id", 
-        help="Organization ID (defaults to OPENAI_ORG_ID env var)"
+    data_group.add_argument(
+        "--api-key",
+        help="Enterprise API key with compliance_export scope (default: from environment variable)",
     )
-    parser.add_argument(
-        "--workspace-id", 
-        help="Workspace ID (defaults to OPENAI_WORKSPACE_ID env var)"
+    data_group.add_argument(
+        "--org-id",
+        help="Organization ID (default: from environment variable)",
     )
-    parser.add_argument(
-        "--output-dir", 
-        default="./rawdata",
-        help="Directory to save downloaded reports (default: ./rawdata)"
-    )
-    
-    # Date range options
-    default_start, default_end = get_default_dates()
-    parser.add_argument(
+    data_group.add_argument(
         "--start-date",
         type=parse_date,
-        default=default_start,
-        help=f"Start date (YYYY-MM-DD) (default: {default_start.strftime('%Y-%m-%d')})"
+        help="Start date for reports (YYYY-MM-DD, default: 7 days ago)",
     )
-    parser.add_argument(
+    data_group.add_argument(
         "--end-date",
         type=parse_date,
-        default=default_end,
-        help=f"End date (YYYY-MM-DD) (default: {default_end.strftime('%Y-%m-%d')})"
+        help="End date for reports (YYYY-MM-DD, default: today)",
+    )
+    data_group.add_argument(
+        "--output-dir",
+        default="./reports",
+        help="Directory to save reports (default: ./reports)",
+    )
+    data_group.add_argument(
+        "--test",
+        action="store_true",
+        help="Run in test mode with mock data",
+    )
+    data_group.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable detailed debug logging for verification",
     )
     
     # Analysis options
-    parser.add_argument(
+    analysis_group = parser.add_argument_group("Analysis Options")
+    analysis_group.add_argument(
         "--run-analysis",
         action="store_true",
         help="Run data analysis after downloading reports"
     )
-    parser.add_argument(
+    analysis_group.add_argument(
         "--analysis-output-dir",
         default="./data",
         help="Directory to save analysis output (default: ./data)"
@@ -397,7 +451,7 @@ def main() -> None:
         # Get users data
         try:
             # Get user engagement metrics
-            engagement_metrics = get_user_engagement(api, args.start_date, args.end_date)
+            engagement_metrics = get_user_engagement(api, args.start_date, args.end_date, debug_logging=args.debug)
             
             # Save engagement metrics to CSV
             output_file = os.path.join(args.output_dir, f"user_engagement_{args.start_date.strftime('%Y%m%d')}_{args.end_date.strftime('%Y%m%d')}.csv")

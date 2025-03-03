@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
+import re
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -22,7 +23,9 @@ class UserAnalysis:
         self.data_dir = Path(data_dir)
         self.output_dir = Path(output_dir)
         self.user_data = None
+        self.ad_data = None
         self._load_data()
+        self._load_ad_data()
 
     def _load_data(self) -> None:
         """Load all user engagement data files."""
@@ -48,6 +51,56 @@ class UserAnalysis:
             self.user_data = pd.concat(dfs, ignore_index=True)
         else:
             raise FileNotFoundError("No user engagement data files found or could not be loaded")
+
+    def _load_ad_data(self) -> None:
+        """Load Active Directory export data for name resolution."""
+        ad_file = self.data_dir / "AD_export.csv"
+        
+        if not ad_file.exists():
+            print("AD export file not found. User name resolution from AD will not be available.")
+            return
+            
+        try:
+            # Try different encodings if UTF-8 fails
+            encodings = ['utf-8', 'utf-8-sig', 'latin1', 'ISO-8859-1', 'cp1252']
+            for encoding in encodings:
+                try:
+                    self.ad_data = pd.read_csv(ad_file, encoding=encoding)
+                    print(f"Successfully loaded AD export data with encoding {encoding}")
+                    print(f"AD data contains {len(self.ad_data)} records")
+                    break
+                except UnicodeDecodeError:
+                    continue
+                    
+            if self.ad_data is None:
+                print("Could not load AD export data with any encoding.")
+        except Exception as e:
+            print(f"Error loading AD export data: {str(e)}")
+            
+    def resolve_user_name_from_ad(self, email: str) -> str:
+        """Resolve a user's display name from their email using AD data.
+        
+        Args:
+            email: User's email address
+            
+        Returns:
+            Display name from AD if found, otherwise the original email
+        """
+        if self.ad_data is None or email is None or pd.isna(email) or email == "":
+            return email
+            
+        # Try to match on userPrincipalName first
+        match = self.ad_data[self.ad_data["userPrincipalName"].str.lower() == email.lower()]
+        
+        # If no match, try the mail column
+        if len(match) == 0:
+            match = self.ad_data[self.ad_data["mail"].str.lower() == email.lower()]
+            
+        # Return the display name if found, otherwise return the email
+        if len(match) > 0 and not pd.isna(match.iloc[0]["displayName"]):
+            return match.iloc[0]["displayName"]
+        else:
+            return email
 
     def generate_active_users_trend(self, save: bool = True) -> Optional[plt.Figure]:
         """Generate a trend graph of active users over time.
@@ -350,6 +403,13 @@ This helps identify patterns in user engagement and message frequency.{filtered_
         if self.user_data is None:
             raise ValueError("User data not loaded")
             
+        # Print data quality information for debugging
+        print("\nData Quality Check:")
+        print(f"Total rows in user_data: {len(self.user_data)}")
+        print(f"Rows with null 'name': {self.user_data['name'].isna().sum()}")
+        print(f"Rows with null 'email': {self.user_data['email'].isna().sum()}")
+        print(f"Rows with null 'public_id': {self.user_data['public_id'].isna().sum()}")
+        
         # Get the latest period data to identify active users
         latest_period = self.user_data["period_end"].max()
         latest_data = self.user_data[self.user_data["period_end"] == latest_period]
@@ -364,6 +424,31 @@ This helps identify patterns in user engagement and message frequency.{filtered_
             (self.user_data["public_id"].isin(active_user_ids))
         ].copy()
         
+        # Create a mapping of email to AD display name for faster processing
+        email_to_display_name = {}
+        
+        # Only create the mapping if AD data is available
+        if self.ad_data is not None:
+            # Count rows with valid emails that we can potentially resolve
+            rows_with_email = valid_data["email"].notna().sum()
+            
+            print(f"\nAttempting to resolve display names from AD data for {rows_with_email} users with emails")
+            
+            # Process userPrincipalName column
+            for _, row in self.ad_data.iterrows():
+                if pd.notna(row["userPrincipalName"]) and pd.notna(row["displayName"]):
+                    email_to_display_name[row["userPrincipalName"].lower()] = row["displayName"]
+                
+                # Also process the mail column if it exists and is different from userPrincipalName
+                if pd.notna(row["mail"]) and pd.notna(row["displayName"]):
+                    if row["mail"].lower() not in email_to_display_name:
+                        email_to_display_name[row["mail"].lower()] = row["displayName"]
+            
+            print(f"Created mapping for {len(email_to_display_name)} email addresses from AD data")
+        
+        # Fill missing names with a placeholder
+        valid_data["name"] = valid_data["name"].fillna("Unknown User")
+        
         # Calculate average messages per user across all periods
         user_avg = (
             valid_data
@@ -377,9 +462,31 @@ This helps identify patterns in user engagement and message frequency.{filtered_
             .reset_index()
         )
         
+        # Print information about the grouped data
+        print(f"\nAfter grouping:")
+        print(f"Total unique users: {len(user_avg)}")
+        print(f"Users with 'Unknown User' as name: {(user_avg['name'] == 'Unknown User').sum()}")
+        
         # Get the created date for each user to calculate periods they could have been active
         user_created_dates = self.user_data[["public_id", "created_or_invited_date"]].drop_duplicates()
-        user_avg = pd.merge(user_created_dates, user_avg, on="public_id", how="left")
+        
+        # Print information about user_created_dates
+        print(f"\nUser created dates:")
+        print(f"Total rows: {len(user_created_dates)}")
+        print(f"Unique public_ids: {user_created_dates['public_id'].nunique()}")
+        print(f"Rows with null public_id: {user_created_dates['public_id'].isna().sum()}")
+        
+        # Remove rows with null public_id before merging
+        user_created_dates = user_created_dates.dropna(subset=["public_id"])
+        
+        # Merge with inner join instead of left join to avoid creating rows with missing data
+        user_avg = pd.merge(user_created_dates, user_avg, on="public_id", how="inner")
+        
+        # Check for any rows with missing critical data after merge
+        print(f"\nAfter merging with created dates:")
+        print(f"Total rows: {len(user_avg)}")
+        print(f"Rows with null name: {user_avg['name'].isna().sum()}")
+        print(f"Rows with null email: {user_avg['email'].isna().sum()}")
         
         # Convert dates to datetime objects for comparison
         user_avg["first_period_dt"] = pd.to_datetime(user_avg["period_start"])
@@ -471,15 +578,51 @@ This helps identify patterns in user engagement and message frequency.{filtered_
             output_df = user_avg.copy()
             output_df["avg_messages"] = output_df["avg_messages"].round(2)
             
-            # Create a display name column (use name if available, otherwise email)
-            output_df["display_name"] = output_df["name"].fillna(output_df["email"])
+            # Create a display name column using AD data for all users
+            output_df["display_name"] = output_df.apply(
+                lambda row: email_to_display_name.get(row["email"].lower(), row["name"]) 
+                if pd.notna(row["email"]) else row["name"],
+                axis=1
+            )
+            
+            # For any rows where display_name is still an email address, try to find a better name
+            email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+            
+            # Print diagnostic information about potential email addresses in display_name
+            email_mask = output_df["display_name"].str.match(email_pattern, na=False)
+            email_count = email_mask.sum()
+            if email_count > 0:
+                print(f"\nFound {email_count} display names that appear to be email addresses")
+                
+                # For rows where display_name is an email, try to extract a name from the email
+                for idx, row in output_df[email_mask].iterrows():
+                    email = row["display_name"]
+                    # Extract the username part of the email (before @)
+                    username = email.split('@')[0]
+                    # Convert username to a more readable format (e.g., john.doe -> John Doe)
+                    name_parts = re.split(r'[._-]', username)
+                    formatted_name = ' '.join([part.capitalize() for part in name_parts])
+                    output_df.at[idx, "display_name"] = formatted_name
+                    
+                print(f"Converted {email_count} email addresses to formatted names")
+            
+            # Ensure we don't have any rows with missing critical data
+            output_df = output_df.dropna(subset=["email"])
             
             # Select only the columns we want to include in the report
             columns_to_include = [
-                "display_name", "avg_messages", "period_start", "period_end", 
+                "display_name", "email", "avg_messages", "period_start", "period_end", 
                 "active_periods", "eligible_periods", "active_period_pct", "engagement_level"
             ]
+            # Only include columns that exist in the DataFrame
+            columns_to_include = [col for col in columns_to_include if col in output_df.columns]
+            
             output_df = output_df[columns_to_include]
+            
+            # Final check for blank rows
+            print(f"\nFinal output check:")
+            print(f"Total rows: {len(output_df)}")
+            print(f"Rows with blank display_name: {(output_df['display_name'] == '').sum()}")
             
             output_df.to_csv(output_file, index=False)
             print(f"Engagement report saved to {output_file}")

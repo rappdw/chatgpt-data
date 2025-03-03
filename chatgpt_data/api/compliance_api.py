@@ -395,7 +395,9 @@ class EnterpriseComplianceAPI:
         callback_fn: callable,
         since_timestamp: Optional[int] = None,
         users: Optional[List[str]] = None,
-        file_format: str = "url"
+        file_format: str = "url",
+        max_retries: int = 3,
+        debug_logging: bool = False
     ) -> int:
         """Process all conversations from the workspace with automatic pagination.
         
@@ -408,6 +410,8 @@ class EnterpriseComplianceAPI:
             since_timestamp: Unix timestamp to filter conversations updated after this time
             users: List of user IDs to filter conversations by
             file_format: Format for files in conversations ('url' or 'id')
+            max_retries: Maximum number of retries for failed API requests
+            debug_logging: Whether to print detailed debug logs
             
         Returns:
             Total number of conversations processed
@@ -422,35 +426,77 @@ class EnterpriseComplianceAPI:
         # Keep track of conversation IDs we've already processed to avoid duplicates
         processed_ids = set()
         
+        # Keep track of pagination attempts for debugging
+        page_count = 0
+        retry_count = 0
+        
         while has_more:
-            response = self.get_conversations(
-                since_timestamp=since_timestamp,
-                after=after,
-                users=users,
-                file_format=file_format
-            )
-            
-            # Process conversations from this page
-            for conversation in response.get("data", []):
-                conversation_id = conversation.get("id")
+            page_count += 1
+            if debug_logging:
+                print(f"\nFetching conversation page {page_count} (after={after})")
                 
-                # Skip if we've already processed this conversation
-                if conversation_id in processed_ids:
-                    continue
+            try:
+                response = self.get_conversations(
+                    since_timestamp=since_timestamp,
+                    after=after,
+                    users=users,
+                    file_format=file_format
+                )
+                
+                # Process conversations from this page
+                conversations = response.get("data", [])
+                if debug_logging:
+                    print(f"Retrieved {len(conversations)} conversations on page {page_count}")
+                
+                for conversation in conversations:
+                    conversation_id = conversation.get("id")
                     
-                # Call the callback function with the conversation
-                callback_fn(conversation)
+                    # Skip if we've already processed this conversation
+                    if conversation_id in processed_ids:
+                        if debug_logging:
+                            print(f"Skipping already processed conversation: {conversation_id}")
+                        continue
+                        
+                    # Call the callback function with the conversation
+                    try:
+                        callback_fn(conversation)
+                        
+                        # Mark as processed
+                        processed_ids.add(conversation_id)
+                        processed_count += 1
+                    except Exception as e:
+                        print(f"Error processing conversation {conversation_id}: {str(e)}")
                 
-                # Mark as processed
-                processed_ids.add(conversation_id)
-                processed_count += 1
-            
-            # Check if we need to fetch more pages
-            has_more = response.get("has_more", False)
-            after = response.get("last_id")
+                # Check if we need to fetch more pages
+                has_more = response.get("has_more", False)
+                after = response.get("last_id")
+                
+                # Reset retry count on successful request
+                retry_count = 0
+                
+            except Exception as e:
+                retry_count += 1
+                print(f"Error fetching conversation page {page_count}: {str(e)}")
+                
+                if retry_count <= max_retries:
+                    print(f"Retrying (attempt {retry_count}/{max_retries})...")
+                    # Continue the loop without changing after, to retry the same page
+                    continue
+                else:
+                    print(f"Max retries ({max_retries}) exceeded, skipping to next page")
+                    # If we've reached max retries, try to continue with the next page if possible
+                    if after:
+                        print(f"Continuing from last known ID: {after}")
+                        retry_count = 0
+                    else:
+                        print("No pagination token available, stopping pagination")
+                        has_more = False
+        
+        if debug_logging:
+            print(f"\nProcessed {processed_count} conversations across {page_count} pages")
             
         return processed_count
-        
+    
     def get_gpt_name(self, gpt_id: str) -> str:
         """Get the builder name of a GPT by its ID.
         
