@@ -103,37 +103,35 @@ class EnterpriseComplianceAPI:
         url = urljoin(self.BASE_URL, endpoint)
         
         try:
-            if method == "GET":
-                response = requests.get(
-                    url, 
-                    headers=self.headers, 
-                    params=params, 
-                    timeout=timeout
-                )
-            elif method == "POST":
-                response = requests.post(
-                    url, 
-                    headers=self.headers, 
-                    params=params, 
-                    json=json_data, 
-                    timeout=timeout
-                )
-            elif method == "DELETE":
-                response = requests.delete(
-                    url, 
-                    headers=self.headers, 
-                    params=params, 
-                    json=json_data, 
-                    timeout=timeout
-                )
-            else:
-                raise ValueError(f"Unsupported HTTP method: {method}")
+            response = requests.request(
+                method, 
+                url, 
+                headers=self.headers, 
+                params=params, 
+                json=json_data, 
+                timeout=timeout
+            )
+            
+            # Special handling for 404 errors related to GPTs and projects
+            if response.status_code == 404:
+                # Check if this is a GPT or project not found error
+                if '/gpts/' in endpoint or '/projects/' in endpoint:
+                    error_content = response.json()
+                    resource_type = "GPT" if '/gpts/' in endpoint else "Project"
+                    resource_id = endpoint.split('/')[-2]  # Extract ID from the endpoint
+                    print(f"{resource_type} not found in workspace: {resource_id}")
+                    raise requests.exceptions.HTTPError(f"{resource_type} not found", response=response)
             
             response.raise_for_status()  # Raise an exception for 4XX/5XX status codes
             
             return response.json()
         except requests.exceptions.HTTPError as e:
             # Handle HTTP errors (4xx, 5xx)
+            # If it's already a simplified 404 error for GPTs/projects, just raise it
+            if str(e).startswith(("GPT not found", "Project not found")):
+                raise
+            
+            # For other errors, provide detailed information
             error_message = f"HTTP Error: {e}"
             
             # Try to get more detailed error information from the response
@@ -527,13 +525,13 @@ class EnterpriseComplianceAPI:
                 # If no configurations found, return the ID
                 return gpt_id
             
-        except Exception as e:
-            # Check if this is a 404 error (GPT not found)
-            error_msg = str(e)
-            if "404" in error_msg and "Not Found" in error_msg:
-                print(f"GPT ID not found: {gpt_id}")
+        except requests.exceptions.HTTPError as e:
+            # If this is our simplified 404 error, just return the ID
+            if str(e).startswith("GPT not found"):
                 return gpt_id
             
+            # For other errors, log and handle as before
+            error_msg = str(e)
             print(f"API request failed when fetching GPT details: {error_msg}")
             
             if self.allow_mock_data:
@@ -573,13 +571,13 @@ class EnterpriseComplianceAPI:
                 # If no configurations found, return the ID
                 return project_id
             
-        except Exception as e:
-            # Check if this is a 404 error (Project not found)
-            error_msg = str(e)
-            if "404" in error_msg and "Not Found" in error_msg:
-                print(f"Project ID not found: {project_id}")
+        except requests.exceptions.HTTPError as e:
+            # If this is our simplified 404 error, just return the ID
+            if str(e).startswith("Project not found"):
                 return project_id
             
+            # For other errors, log and handle as before
+            error_msg = str(e)
             print(f"API request failed when fetching project details: {error_msg}")
             
             if self.allow_mock_data:
