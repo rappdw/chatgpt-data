@@ -8,6 +8,8 @@ import re
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import json
+from rapidfuzz import fuzz, process
 
 
 class UserAnalysis:
@@ -24,8 +26,11 @@ class UserAnalysis:
         self.output_dir = Path(output_dir)
         self.user_data = None
         self.ad_data = None
+        self.management_chains = None
+        self.normalized_names = None
         self._load_data()
         self._load_ad_data()
+        self._load_management_chains()
 
     def _load_data(self) -> None:
         """Load all user engagement data files."""
@@ -77,6 +82,306 @@ class UserAnalysis:
         except Exception as e:
             print(f"Error loading AD export data: {str(e)}")
             
+    def _load_management_chains(self) -> None:
+        """Load management chain data from JSON file."""
+        management_chains_file = self.data_dir / "management_chains.json"
+        
+        if not management_chains_file.exists():
+            print("Management chains file not found. Management chain information will not be available.")
+            return
+            
+        try:
+            with open(management_chains_file, 'r') as f:
+                self.management_chains = json.load(f)
+            print(f"Successfully loaded management chain data for {len(self.management_chains)} employees")
+            
+            # Create a normalized name mapping for fuzzy matching
+            self.normalized_names = {}
+            for name in self.management_chains.keys():
+                # Normalize the name (lowercase, remove extra spaces)
+                normalized = self._normalize_name(name)
+                self.normalized_names[normalized] = name
+                
+                # Also add common name variations (e.g., Dan -> Daniel)
+                variations = self._get_name_variations(name)
+                for variation in variations:
+                    normalized_variation = self._normalize_name(variation)
+                    if normalized_variation != normalized:
+                        self.normalized_names[normalized_variation] = name
+                
+                # Add first name + last name version for names with 3+ parts (handling maiden names)
+                name_components = self._extract_name_components(name)
+                if len(normalized.split()) >= 3 and "first_name" in name_components and "last_name" in name_components:
+                    simplified_name = f"{name_components['first_name']} {name_components['last_name']}"
+                    if simplified_name != normalized:
+                        self.normalized_names[simplified_name] = name
+                
+                # For names with exactly 2 parts, add potential maiden name variations
+                if len(normalized.split()) == 2:
+                    maiden_variations = self._expand_with_common_maiden_names(name)
+                    for variation in maiden_variations:
+                        self.normalized_names[variation] = name
+                        
+            print(f"Created normalized name mapping with {len(self.normalized_names)} entries")
+            
+        except Exception as e:
+            print(f"Error loading management chain data: {str(e)}")
+            
+    def _normalize_name(self, name: str) -> str:
+        """Normalize a name for comparison.
+        
+        Args:
+            name: Name to normalize
+            
+        Returns:
+            Normalized name (lowercase, no extra spaces, no parenthetical text)
+        """
+        if not name or pd.isna(name):
+            return ""
+            
+        # Remove parenthetical text (like foreign scripts or additional information)
+        name_without_parentheses = re.sub(r'\s*\([^)]*\)', '', name)
+        
+        # Convert to lowercase and remove extra spaces
+        normalized = re.sub(r'\s+', ' ', name_without_parentheses.lower().strip())
+        return normalized
+        
+    def _extract_name_components(self, name: str) -> dict:
+        """Extract components from a name for more flexible matching.
+        
+        Args:
+            name: Full name to extract components from
+            
+        Returns:
+            Dictionary with first_name, last_name, and full_name keys
+        """
+        if not name or pd.isna(name):
+            return {"first_name": "", "last_name": "", "full_name": ""}
+            
+        # Normalize the name first
+        normalized = self._normalize_name(name)
+        if not normalized:
+            return {"first_name": "", "last_name": "", "full_name": normalized}
+            
+        # Split the name into parts
+        parts = normalized.split()
+        
+        result = {
+            "full_name": normalized,
+            "first_name": parts[0] if parts else "",
+            "last_name": parts[-1] if parts else ""
+        }
+        
+        # If there are at least 3 parts, store potential middle/maiden names
+        if len(parts) >= 3:
+            result["middle_names"] = parts[1:-1]
+        
+        return result
+    
+    def _expand_with_common_maiden_names(self, name: str) -> List[str]:
+        """Generate potential variations by adding common maiden name positions.
+        
+        This helps match a first+last name against a first+maiden+last name.
+        
+        Args:
+            name: Original name
+            
+        Returns:
+            List of name variations with potential maiden name placements
+        """
+        variations = []
+        
+        # Skip if name is empty or not a string
+        if not name or pd.isna(name):
+            return variations
+            
+        # Split the name into parts
+        parts = self._normalize_name(name).split()
+        
+        # We only handle the case of exactly 2 parts (first + last)
+        if len(parts) != 2:
+            return variations
+            
+        # Common maiden name positions (typically between first and last name)
+        # We'll use some common placeholder maiden names
+        common_maiden_placeholders = ["middlename", "maidenname"]
+        
+        for placeholder in common_maiden_placeholders:
+            # Create a variation with the placeholder in the middle
+            variation = f"{parts[0]} {placeholder} {parts[1]}"
+            variations.append(variation)
+            
+        return variations
+        
+    def _get_name_variations(self, name: str) -> List[str]:
+        """Generate common variations of a name.
+        
+        Args:
+            name: Original name
+            
+        Returns:
+            List of name variations
+        """
+        variations = []
+        
+        # Skip if name is empty or not a string
+        if not name or pd.isna(name):
+            return variations
+            
+        # Split the name into parts
+        parts = name.split()
+        if len(parts) < 1:
+            return variations
+            
+        # Common first name variations
+        first_name = parts[0]
+        common_variations = {
+            "nathan": ["nate"],
+            "nate": ["nathan"],
+            "daniel": ["dan", "danny"],
+            "dan": ["daniel", "danny"],
+            "danny": ["daniel", "dan"],
+            "michael": ["mike", "mick"],
+            "mike": ["michael", "mick"],
+            "robert": ["rob", "bob", "bobby"],
+            "rob": ["robert", "bob", "bobby"],
+            "bob": ["robert", "rob", "bobby"],
+            "william": ["will", "bill", "billy"],
+            "will": ["william", "bill", "billy"],
+            "bill": ["william", "will", "billy"],
+            "richard": ["rick", "dick", "rich"],
+            "rick": ["richard", "dick", "rich"],
+            "james": ["jim", "jimmy"],
+            "jim": ["james", "jimmy"],
+            "thomas": ["tom", "tommy"],
+            "tom": ["thomas", "tommy"],
+            "john": ["johnny", "jon"],
+            "jonathan": ["jon", "jonny"],
+            "christopher": ["chris", "topher"],
+            "chris": ["christopher", "topher"],
+            "joseph": ["joe", "joey"],
+            "joe": ["joseph", "joey"],
+            "david": ["dave", "davey"],
+            "dave": ["david", "davey"],
+            "charles": ["chuck", "charlie"],
+            "chuck": ["charles", "charlie"],
+            "charlie": ["charles", "chuck"],
+            "matthew": ["matt", "matty"],
+            "matt": ["matthew", "matty"],
+            "nicholas": ["nick", "nicky"],
+            "nick": ["nicholas", "nicky"],
+            "anthony": ["tony", "ant"],
+            "tony": ["anthony", "ant"],
+            "steven": ["steve", "stevie"],
+            "steve": ["steven", "stevie"],
+            "andrew": ["andy", "drew"],
+            "andy": ["andrew", "drew"],
+            "drew": ["andrew", "andy"],
+            "jennifer": ["jen", "jenny"],
+            "jen": ["jennifer", "jenny"],
+            "jessica": ["jess", "jessie"],
+            "jess": ["jessica", "jessie"],
+            "elizabeth": ["liz", "beth", "eliza"],
+            "liz": ["elizabeth", "beth", "eliza"],
+            "beth": ["elizabeth", "liz", "eliza"],
+            "katherine": ["kate", "katie", "kathy"],
+            "kate": ["katherine", "katie", "kathy"],
+            "katie": ["katherine", "kate", "kathy"],
+            "kathy": ["katherine", "kate", "katie"],
+            "margaret": ["maggie", "meg", "peggy"],
+            "maggie": ["margaret", "meg", "peggy"],
+            "patricia": ["pat", "patty", "tricia"],
+            "pat": ["patricia", "patty", "tricia"],
+            "stephanie": ["steph", "stephie"],
+            "steph": ["stephanie", "stephie"],
+            "constanza": ["connie", "constance"],
+            "constance": ["connie", "constanza"],
+        }
+        
+        first_lower = first_name.lower()
+        if first_lower in common_variations:
+            for variation in common_variations[first_lower]:
+                if len(parts) > 1:
+                    # Create full name with the variation
+                    variations.append(f"{variation.capitalize()} {' '.join(parts[1:])}")
+                else:
+                    variations.append(variation.capitalize())
+                    
+        return variations
+            
+    def get_management_chain(self, name: str) -> List[str]:
+        """Get the management chain for an employee.
+        
+        Args:
+            name: Employee name
+            
+        Returns:
+            List of managers in the chain (in reverse order, from employee to CEO)
+        """
+        if self.management_chains is None or name is None or pd.isna(name):
+            return []
+            
+        # Try exact match first
+        if name in self.management_chains:
+            return self.management_chains[name]
+            
+        # Try normalized name match
+        normalized_name = self._normalize_name(name)
+        if normalized_name in self.normalized_names:
+            actual_name = self.normalized_names[normalized_name]
+            return self.management_chains[actual_name]
+            
+        # Extract name components for more flexible matching
+        name_components = self._extract_name_components(name)
+        
+        # Try to match based on first name + last name if we have a complex name
+        if len(normalized_name.split()) >= 3 and "first_name" in name_components and "last_name" in name_components:
+            # Create a simplified name with just first and last name
+            simplified_name = f"{name_components['first_name']} {name_components['last_name']}"
+            
+            # Check if this simplified name exists in our normalized names
+            if simplified_name in self.normalized_names:
+                actual_name = self.normalized_names[simplified_name]
+                return self.management_chains[actual_name]
+        
+        # If we have a simple name (first + last), try matching against expanded maiden name variations
+        if len(normalized_name.split()) == 2:
+            # Generate potential maiden name variations
+            maiden_variations = self._expand_with_common_maiden_names(name)
+            for variation in maiden_variations:
+                if variation in self.normalized_names:
+                    actual_name = self.normalized_names[variation]
+                    return self.management_chains[actual_name]
+                
+        # Try fuzzy matching if no exact or normalized match
+        # First check if we have any close matches in the normalized names
+        best_match = None
+        best_score = 0
+        
+        # Only consider matches with score above this threshold
+        threshold = 85
+        
+        for key_name in self.management_chains.keys():
+            # Try exact component matching first (first name + last name)
+            key_components = self._extract_name_components(key_name)
+            
+            # Check if first and last names match exactly
+            if (name_components["first_name"] == key_components["first_name"] and 
+                name_components["last_name"] == key_components["last_name"]):
+                return self.management_chains[key_name]
+            
+            # If that fails, try fuzzy matching on the full name
+            score = fuzz.ratio(normalized_name, self._normalize_name(key_name))
+            if score > threshold and score > best_score:
+                best_score = score
+                best_match = key_name
+                
+        if best_match:
+            return self.management_chains[best_match]
+                
+        # If no match found, return empty list
+        return []
+
     def resolve_user_name_from_ad(self, email: str) -> str:
         """Resolve a user's display name from their email using AD data.
         
@@ -606,14 +911,56 @@ This helps identify patterns in user engagement and message frequency.{filtered_
                     
                 print(f"Converted {email_count} email addresses to formatted names")
             
+            # Add management chain information if available
+            if self.management_chains is not None:
+                print("\nAdding management chain information to the report")
+                
+                # Determine the maximum depth of any management chain
+                max_chain_depth = 0
+                for chain in self.management_chains.values():
+                    max_chain_depth = max(max_chain_depth, len(chain))
+                
+                print(f"Maximum management chain depth: {max_chain_depth}")
+                
+                # Create columns for each level in the management chain
+                # Reverse the order so highest level (CEO) is first, then direct reports, etc.
+                for i in range(max_chain_depth):
+                    output_df[f"manager_{max_chain_depth-i}"] = None
+                
+                # Fill in management chain information for each employee
+                match_count = 0
+                fuzzy_match_count = 0
+                for idx, row in output_df.iterrows():
+                    # Try to get management chain with fuzzy matching
+                    chain = self.get_management_chain(row["display_name"])
+                    if chain:
+                        match_count += 1
+                        # Check if this was a fuzzy match (not an exact match)
+                        if row["display_name"] not in self.management_chains and self._normalize_name(row["display_name"]) not in self.normalized_names:
+                            fuzzy_match_count += 1
+                            
+                        # Reverse the chain to go from CEO down to direct manager
+                        reversed_chain = list(reversed(chain))
+                        # Add each manager to the appropriate column
+                        for i, manager in enumerate(reversed_chain):
+                            output_df.at[idx, f"manager_{i+1}"] = manager
+                
+                print(f"Found management chain information for {match_count} out of {len(output_df)} employees")
+                print(f"  - {fuzzy_match_count} matches were found using fuzzy name matching")
+            
             # Ensure we don't have any rows with missing critical data
             output_df = output_df.dropna(subset=["email"])
             
             # Select only the columns we want to include in the report
-            columns_to_include = [
+            base_columns = [
                 "display_name", "email", "avg_messages", "period_start", "period_end", 
                 "active_periods", "eligible_periods", "active_period_pct", "engagement_level"
             ]
+            
+            # Add management chain columns if they exist
+            manager_columns = [col for col in output_df.columns if col.startswith("manager_")]
+            columns_to_include = base_columns + manager_columns
+            
             # Only include columns that exist in the DataFrame
             columns_to_include = [col for col in columns_to_include if col in output_df.columns]
             
@@ -765,6 +1112,12 @@ This helps identify patterns in user engagement and message frequency.{filtered_
             columns_to_include = [col for col in columns_to_include if col in output_df.columns]
             
             output_df = output_df[columns_to_include]
+            
+            # Final check for blank rows
+            print(f"\nFinal output check:")
+            print(f"Total rows: {len(output_df)}")
+            print(f"Rows with blank display_name: {(output_df['display_name'] == '').sum()}")
+            
             output_df.to_csv(output_file, index=False)
             print(f"Non-engagement report saved to {output_file}")
             

@@ -88,6 +88,64 @@ Options:
 - `--high-threshold`: Minimum average number of messages to be considered highly engaged (default: 20)
 - `--low-threshold`: Maximum average number of messages to be considered low engaged (default: 5)
 
+## Data Preparation for Analysis
+
+Before running the analysis tools, you need to prepare the necessary data files in the `rawdata` directory:
+
+### 1. ChatGPT Usage Reports
+Obtain the latest ChatGPT usage reports from OpenAI:
+- Download the report attachments from the weekly email sent by OpenAI
+- Save the user engagement files (prefixed with "proofpoint_user_engagement") to the `rawdata` directory
+- Save the GPT engagement files (prefixed with "proofpoint_gpt_engagement") to the `rawdata` directory
+
+Alternatively, you can use the `get_usage_data` command to fetch these reports directly via the Enterprise Compliance API.
+
+### 2. Active Directory Export
+To resolve user names and email addresses:
+- Export user data from Active Directory
+- Save the file as `AD_export.csv` in the `rawdata` directory
+- Ensure the file contains at least the following columns:
+  - `userPrincipalName` (email address)
+  - `displayName` (full name)
+  - `mail` (alternative email address, if available)
+
+### 3. Management Chain Information
+To include organizational hierarchy in the reports:
+- Export company information from Workday
+- Process this data using the `management_chains` tool from the `graphviz_workday` repository
+- Save the resulting `management_chains.json` file in the `rawdata` directory
+- The JSON file should map employee names to their management chain (array of manager names)
+
+Example `management_chains.json` format:
+```json
+{
+  "Employee Name": [
+    "Direct Manager",
+    "Manager's Manager",
+    "Executive",
+    "CEO"
+  ]
+}
+```
+
+### Running the Analysis
+Once all data files are in place, run the analysis:
+
+```bash
+# Run the complete analysis
+python -m chatgpt_data.cli.all_trends
+
+# Generate only the engagement report with management chain information
+python -m chatgpt_data.cli.all_trends --skip-gpt-trends --skip-non-engaged-report
+```
+
+The analysis will:
+1. Load and process all data files
+2. Resolve user names from the AD export
+3. Add management chain information from the JSON file
+4. Generate trend graphs and reports
+5. Save all outputs to the specified output directory (default: `./data`)
+
 ## Generated Graphs
 
 ### User Trends
