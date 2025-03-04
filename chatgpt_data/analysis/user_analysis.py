@@ -1103,11 +1103,106 @@ This helps identify patterns in user engagement and message frequency.{filtered_
             # Create a display name column (use name if available, otherwise email)
             output_df["display_name"] = output_df["name"].fillna(output_df["email"])
             
+            # Create a mapping of email to AD display name for faster processing
+            email_to_display_name = {}
+            
+            # Only create the mapping if AD data is available
+            if self.ad_data is not None:
+                # Count rows with valid emails that we can potentially resolve
+                rows_with_email = output_df["email"].notna().sum()
+                
+                print(f"\nAttempting to resolve display names from AD data for {rows_with_email} users with emails")
+                
+                # Process userPrincipalName column
+                for _, row in self.ad_data.iterrows():
+                    if pd.notna(row["userPrincipalName"]) and pd.notna(row["displayName"]):
+                        email_to_display_name[row["userPrincipalName"].lower()] = row["displayName"]
+                    
+                    # Also process the mail column if it exists and is different from userPrincipalName
+                    if pd.notna(row["mail"]) and pd.notna(row["displayName"]):
+                        if row["mail"].lower() not in email_to_display_name:
+                            email_to_display_name[row["mail"].lower()] = row["displayName"]
+                
+                print(f"Created mapping for {len(email_to_display_name)} email addresses from AD data")
+                
+                # Update display names using AD data
+                output_df["display_name"] = output_df.apply(
+                    lambda row: email_to_display_name.get(row["email"].lower(), row["display_name"]) 
+                    if pd.notna(row["email"]) else row["display_name"],
+                    axis=1
+                )
+            
+            # For any rows where display_name is still an email address, try to find a better name
+            email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+            
+            # Print diagnostic information about potential email addresses in display_name
+            email_mask = output_df["display_name"].str.match(email_pattern, na=False)
+            email_count = email_mask.sum()
+            if email_count > 0:
+                print(f"\nFound {email_count} display names that appear to be email addresses")
+                
+                # For rows where display_name is an email, try to extract a name from the email
+                for idx, row in output_df[email_mask].iterrows():
+                    email = row["display_name"]
+                    # Extract the username part of the email (before @)
+                    username = email.split('@')[0]
+                    # Convert username to a more readable format (e.g., john.doe -> John Doe)
+                    name_parts = re.split(r'[._-]', username)
+                    formatted_name = ' '.join([part.capitalize() for part in name_parts])
+                    output_df.at[idx, "display_name"] = formatted_name
+                    
+                print(f"Converted {email_count} email addresses to formatted names")
+            
+            # Add management chain information if available
+            if self.management_chains is not None:
+                print("\nAdding management chain information to the report")
+                
+                # Determine the maximum depth of any management chain
+                max_chain_depth = 0
+                for chain in self.management_chains.values():
+                    max_chain_depth = max(max_chain_depth, len(chain))
+                
+                print(f"Maximum management chain depth: {max_chain_depth}")
+                
+                # Create columns for each level in the management chain
+                # Reverse the order so highest level (CEO) is first, then direct reports, etc.
+                for i in range(max_chain_depth):
+                    output_df[f"manager_{max_chain_depth-i}"] = None
+                
+                # Fill in management chain information for each employee
+                match_count = 0
+                fuzzy_match_count = 0
+                for idx, row in output_df.iterrows():
+                    # Try to get management chain with fuzzy matching
+                    chain = self.get_management_chain(row["display_name"])
+                    if chain:
+                        match_count += 1
+                        # Check if this was a fuzzy match (not an exact match)
+                        if row["display_name"] not in self.management_chains and self._normalize_name(row["display_name"]) not in self.normalized_names:
+                            fuzzy_match_count += 1
+                        
+                        # Reverse the chain to go from CEO down to direct manager
+                        reversed_chain = list(reversed(chain))
+                        # Add each manager to the appropriate column
+                        for i, manager in enumerate(reversed_chain):
+                            output_df.at[idx, f"manager_{i+1}"] = manager
+                
+                print(f"Found management chain information for {match_count} out of {len(output_df)} employees")
+                print(f"  - {fuzzy_match_count} matches were found using fuzzy name matching")
+            
+            # Ensure we don't have any rows with missing critical data
+            output_df = output_df.dropna(subset=["email"])
+            
             # Select only the columns we want to include in the report
-            columns_to_include = [
-                "display_name", "user_role", "role", "department", 
+            base_columns = [
+                "display_name", "email", "user_role", "role", "department", 
                 "user_status", "created_or_invited_date"
             ]
+            
+            # Add management chain columns if they exist
+            manager_columns = [col for col in output_df.columns if col.startswith("manager_")]
+            columns_to_include = base_columns + manager_columns
+            
             # Only include columns that exist in the DataFrame
             columns_to_include = [col for col in columns_to_include if col in output_df.columns]
             

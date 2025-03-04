@@ -210,6 +210,105 @@
         .action-button:hover {
             background-color: var(--pp-dark-blue);
         }
+        
+        /* Filter controls */
+        .filter-container {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: var(--pp-light-gray);
+            border-radius: 4px;
+            border: 1px solid var(--pp-light-blue);
+        }
+        
+        .filter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .filter-count {
+            font-size: 0.9em;
+            color: var(--pp-gray);
+            font-style: italic;
+        }
+        
+        .filter-title {
+            font-weight: 600;
+            color: var(--pp-dark-blue);
+        }
+        
+        .filter-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 150px;
+        }
+        
+        .filter-group label {
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            color: var(--pp-gray);
+        }
+        
+        .filter-group select {
+            padding: 8px;
+            border: 1px solid var(--pp-light-gray);
+            border-radius: 4px;
+            background-color: var(--pp-white);
+        }
+        
+        .filter-group select:focus {
+            border-color: var(--pp-blue);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(15, 112, 198, 0.2);
+        }
+        
+        .filter-actions {
+            margin-top: 15px;
+            display: flex;
+            justify-content: flex-end;
+        }
+        
+        #clear-filters {
+            background-color: var(--pp-gray);
+            font-size: 0.9em;
+            padding: 8px 15px;
+        }
+        
+        #clear-filters:hover {
+            background-color: var(--pp-dark-gray);
+        }
+        
+        /* Manager column styling */
+        th[scope="col"]:nth-child(n+7) {
+            background-color: #e6f2ff;
+        }
+
+        td:nth-child(n+7) {
+            background-color: #f5f9ff;
+        }
+
+        /* Highlight manager columns in non-engaged users report */
+        table.non-engaged th:nth-child(n+7),
+        table.non-engaged td:nth-child(n+7) {
+            background-color: #f0f7ff;
+            border-left: 1px solid #cce0ff;
+        }
+
+        tr:hover td {
+            background-color: var(--hover-color);
+        }
+
+        /* Manager column hover state */
+        tr:hover td:nth-child(n+7) {
+            background-color: #e6f0ff;
+        }
     </style>
 </head>
 <body>
@@ -436,6 +535,9 @@
             user_engagement: { headers: [], rows: [] }
         };
 
+        // Add a mapping to store user to manager relationships
+        let userManagerMap = {};
+
         document.addEventListener('DOMContentLoaded', async () => {
             // Fetch the actual CSV data
             try {
@@ -443,6 +545,9 @@
                 csvData.non_engaged_users = await fetchCsvData('data/non_engaged_users_report.csv');
                 csvData.user_engagement = await fetchCsvData('data/user_engagement_report.csv');
                 console.log('CSV data loaded successfully:', csvData);
+                
+                // Build the user-manager mapping after loading data
+                buildUserManagerMap();
             } catch (error) {
                 console.error('Error loading CSV data:', error);
                 // Fall back to sample data if loading fails
@@ -464,6 +569,9 @@
                         { field: 1, type: 'number' } // Sort by avg_messages in descending order
                     )
                 };
+                
+                // Even with sample data, try to build a basic user-manager map
+                buildUserManagerMap();
             }
 
             const fileItems = document.querySelectorAll('.file-item');
@@ -501,14 +609,76 @@
                     <input type="text" id="search-input" placeholder="Search in ${csvId.replace('_', ' ')}..." data-csv-id="${csvId}">
                 </div>`;
                 
-                // Create table
-                html += '<table id="data-table">';
+                // Add manager filters for both user_engagement and non_engaged_users files
+                if (csvId === 'user_engagement' || csvId === 'non_engaged_users') {
+                    html += `<div class="filter-container">
+                        <div class="filter-header">
+                            <div class="filter-title">Filter by Manager:</div>
+                            <div id="filter-count" class="filter-count">Showing all ${rows.length} records</div>
+                        </div>
+                        <div class="filter-controls">`;
+                    
+                    // Get manager columns from user_engagement data
+                    const userEngagementData = csvData.user_engagement;
+                    
+                    // Create filter dropdowns for manager columns
+                    for (let i = 2; i <= 7; i++) {
+                        const managerColIndex = userEngagementData.headers.indexOf(`manager_${i}`);
+                        if (managerColIndex !== -1) {
+                            // Get unique manager names for this level
+                            const managers = [...new Set(userEngagementData.rows.map(row => row[managerColIndex]).filter(Boolean))].sort();
+                            
+                            if (managers.length > 0) {
+                                html += `
+                                <div class="filter-group">
+                                    <label for="manager-${i}-filter">Manager ${i}:</label>
+                                    <select id="manager-${i}-filter" class="manager-filter" data-level="${i}" data-column="${managerColIndex}">
+                                        <option value="">All</option>`;
+                                
+                                managers.forEach(manager => {
+                                    html += `<option value="${manager}">${manager}</option>`;
+                                });
+                                
+                                html += `</select>
+                                </div>`;
+                            }
+                        }
+                    }
+                    
+                    html += `</div>
+                        <div class="filter-actions">
+                            <button id="clear-filters" class="action-button">Clear All Filters</button>
+                        </div>
+                    </div>`;
+                }
+                
+                // Create table with appropriate class for styling
+                html += `<table id="data-table" class="${csvId}">`;
                 
                 // Add headers
                 html += '<thead><tr>';
+                
+                // Check if the non_engaged_users data already has manager columns
+                const hasManagerColumns = csvId === 'non_engaged_users' && 
+                    headers.some(header => header.startsWith('manager_'));
+                
+                // Add the headers
                 headers.forEach(header => {
                     html += `<th>${header}</th>`;
                 });
+                
+                // For non_engaged_users, add manager columns only if they don't already exist
+                if (csvId === 'non_engaged_users' && !hasManagerColumns) {
+                    // Add manager headers from user_engagement
+                    const userEngagementHeaders = csvData.user_engagement.headers;
+                    for (let i = 2; i <= 7; i++) {
+                        const managerHeader = `manager_${i}`;
+                        if (userEngagementHeaders.includes(managerHeader)) {
+                            html += `<th class="manager-column">${managerHeader}</th>`;
+                        }
+                    }
+                }
+                
                 html += '</tr></thead>';
                 
                 // Add data rows
@@ -518,23 +688,38 @@
                 const rowsToShow = rows.slice(0, 10);
                 rowsToShow.forEach(row => {
                     html += '<tr>';
+                    
+                    // Add the original cells
                     row.forEach(cell => {
                         html += `<td>${cell}</td>`;
                     });
+                    
+                    // For non_engaged_users, add manager cells only if they don't already exist in the data
+                    if (csvId === 'non_engaged_users' && !hasManagerColumns) {
+                        // Add manager cells from userManagerMap
+                        const displayNameIndex = csvData[csvId].headers.indexOf('display_name');
+                        const userName = row[displayNameIndex];
+                        
+                        // Get manager columns from user_engagement
+                        const userEngagementHeaders = csvData.user_engagement.headers;
+                        for (let i = 2; i <= 7; i++) {
+                            const managerHeader = `manager_${i}`;
+                            if (userEngagementHeaders.includes(managerHeader)) {
+                                const managerValue = userManagerMap[userName] && userManagerMap[userName][managerHeader] 
+                                    ? userManagerMap[userName][managerHeader] 
+                                    : '';
+                                html += `<td>${managerValue}</td>`;
+                            }
+                        }
+                    }
+                    
                     html += '</tr>';
                 });
                 
                 html += '</tbody></table>';
                 
-                // Add pagination controls
-                if (rows.length > 10) {
-                    html += `
-                    <div class="pagination">
-                        <button id="prev-page" disabled>Previous</button>
-                        <span id="page-info">Page 1 of ${Math.ceil(rows.length / 10)}</span>
-                        <button id="next-page">Next</button>
-                    </div>`;
-                }
+                // Add a div for pagination (will be populated by setupPagination)
+                html += '<div id="pagination" class="pagination"></div>';
                 
                 contentDiv.innerHTML = html;
                 
@@ -544,78 +729,420 @@
                     const csvId = this.getAttribute('data-csv-id');
                     const allRows = csvData[csvId].rows;
                     
-                    const filteredRows = allRows.filter(row => 
-                        row.some(cell => cell.toString().toLowerCase().includes(searchTerm))
-                    );
-                    
-                    updateTable(filteredRows, 0);
-                    updatePagination(filteredRows);
+                    filterAndUpdateTable(allRows, searchTerm, csvId);
                 });
                 
+                // Add event listeners for manager filters for both reports
+                if (csvId === 'user_engagement' || csvId === 'non_engaged_users') {
+                    document.querySelectorAll('.manager-filter').forEach(filter => {
+                        filter.addEventListener('change', function() {
+                            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+                            const allRows = csvData[csvId].rows;
+                            
+                            // Update available options in lower-level manager dropdowns
+                            updateManagerDropdowns(this, csvId);
+                            
+                            filterAndUpdateTable(allRows, searchTerm, csvId);
+                        });
+                    });
+                    
+                    // Add event listener for clear filters button
+                    const clearFiltersButton = document.getElementById('clear-filters');
+                    if (clearFiltersButton) {
+                        clearFiltersButton.addEventListener('click', function() {
+                            // Clear search input
+                            const searchInput = document.getElementById('search-input');
+                            searchInput.value = '';
+                            
+                            // Reset all manager filters
+                            document.querySelectorAll('.manager-filter').forEach(filter => {
+                                filter.value = '';
+                            });
+                            
+                            // Reset the table to show all rows
+                            const allRows = csvData[csvId].rows;
+                            updateTable(allRows, 0);
+                            setupPagination(allRows);
+                            
+                            // Update the filter count
+                            const filterCount = document.getElementById('filter-count');
+                            if (filterCount) {
+                                filterCount.textContent = `Showing all ${allRows.length} records`;
+                            }
+                            
+                            // Reset all dropdowns to show all available options
+                            resetManagerDropdowns(csvId);
+                        });
+                    }
+                }
+                
                 // Set up pagination
-                if (rows.length > 10) {
-                    setupPagination(rows);
+                setupPagination(rows);
+            }
+            
+            function filterAndUpdateTable(allRows, searchTerm, csvId) {
+                // Get the display_name column index
+                const displayNameIndex = csvData[csvId].headers.indexOf('display_name');
+                
+                // Apply text search filter only on display_name column
+                let filteredRows = allRows;
+                if (searchTerm && displayNameIndex !== -1) {
+                    filteredRows = allRows.filter(row => 
+                        row[displayNameIndex] && 
+                        row[displayNameIndex].toString().toLowerCase().includes(searchTerm)
+                    );
+                }
+                
+                // Apply manager filters for both user_engagement and non_engaged_users files
+                if (csvId === 'user_engagement' || csvId === 'non_engaged_users') {
+                    const managerFilters = document.querySelectorAll('.manager-filter');
+                    
+                    // For user_engagement, filter directly by manager columns
+                    if (csvId === 'user_engagement') {
+                        managerFilters.forEach(filter => {
+                            const selectedValue = filter.value;
+                            if (selectedValue) {
+                                const columnIndex = parseInt(filter.getAttribute('data-column'));
+                                filteredRows = filteredRows.filter(row => row[columnIndex] === selectedValue);
+                            }
+                        });
+                    } 
+                    // For non_engaged_users, filter using the userManagerMap
+                    else if (csvId === 'non_engaged_users') {
+                        const displayNameIndex = csvData[csvId].headers.indexOf('display_name');
+                        
+                        managerFilters.forEach(filter => {
+                            const selectedValue = filter.value;
+                            if (selectedValue) {
+                                const level = parseInt(filter.getAttribute('data-level'));
+                                const managerKey = `manager_${level}`;
+                                
+                                filteredRows = filteredRows.filter(row => {
+                                    const userName = row[displayNameIndex];
+                                    return userManagerMap[userName] && 
+                                           userManagerMap[userName][managerKey] === selectedValue;
+                                });
+                            }
+                        });
+                    }
+                    
+                    // Update the filter count
+                    const filterCount = document.getElementById('filter-count');
+                    if (filterCount) {
+                        if (filteredRows.length === allRows.length) {
+                            filterCount.textContent = `Showing all ${filteredRows.length} records`;
+                        } else {
+                            filterCount.textContent = `Showing ${filteredRows.length} of ${allRows.length} records`;
+                        }
+                    }
+                }
+                
+                updateTable(filteredRows, 0);
+                setupPagination(filteredRows);
+            }
+            
+            function updateManagerDropdowns(changedFilter, csvId) {
+                // Get the current filter level
+                const currentLevel = parseInt(changedFilter.getAttribute('data-level'));
+                const selectedValue = changedFilter.value;
+                
+                // Get all filters
+                const managerFilters = Array.from(document.querySelectorAll('.manager-filter'));
+                
+                // Get the current filter state
+                const filterState = {};
+                for (let i = 2; i <= 7; i++) {
+                    const filter = managerFilters.find(f => parseInt(f.getAttribute('data-level')) === i);
+                    if (filter) {
+                        filterState[i] = filter.value;
+                    }
+                }
+                
+                // If a filter was cleared, we need to reset all filters
+                if (selectedValue === '' && Object.values(filterState).some(value => value !== '')) {
+                    // Get all rows that match the remaining filters
+                    let filteredRows = csvData.user_engagement.rows;
+                    for (let i = 2; i <= 7; i++) {
+                        if (i !== currentLevel && filterState[i]) {
+                            const filter = managerFilters.find(f => parseInt(f.getAttribute('data-level')) === i);
+                            const columnIndex = parseInt(filter.getAttribute('data-column'));
+                            filteredRows = filteredRows.filter(row => row[columnIndex] === filterState[i]);
+                        }
+                    }
+                    
+                    // Update all dropdowns based on the filtered rows
+                    updateAllDropdowns(filteredRows, filterState);
+                    return;
+                }
+                
+                // If a specific manager was selected, we need to update both up and down the chain
+                if (selectedValue !== '') {
+                    // First, get all rows where the selected manager is at the current level
+                    const columnIndex = parseInt(changedFilter.getAttribute('data-column'));
+                    let filteredRows = csvData.user_engagement.rows.filter(row => row[columnIndex] === selectedValue);
+                    
+                    // Find a representative row to get the management chain
+                    if (filteredRows.length > 0) {
+                        const representativeRow = filteredRows[0];
+                        
+                        // Automatically set filters for managers up the chain
+                        for (let i = 2; i <= 7; i++) {
+                            if (i !== currentLevel) {
+                                const filter = managerFilters.find(f => parseInt(f.getAttribute('data-level')) === i);
+                                if (filter) {
+                                    const colIndex = parseInt(filter.getAttribute('data-column'));
+                                    const managerValue = representativeRow[colIndex];
+                                    
+                                    // Only set filters for levels above the current level (up the chain)
+                                    if (i < currentLevel && managerValue) {
+                                        filter.value = managerValue;
+                                        filterState[i] = managerValue;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Apply all filters to get the final filtered rows
+                    filteredRows = csvData.user_engagement.rows;
+                    for (let i = 2; i <= 7; i++) {
+                        if (filterState[i]) {
+                            const filter = managerFilters.find(f => parseInt(f.getAttribute('data-level')) === i);
+                            const colIndex = parseInt(filter.getAttribute('data-column'));
+                            filteredRows = filteredRows.filter(row => row[colIndex] === filterState[i]);
+                        }
+                    }
+                    
+                    // Update all dropdowns based on the filtered rows
+                    updateAllDropdowns(filteredRows, filterState);
+                    
+                    // Trigger the filter update to refresh the table
+                    const searchTerm = document.getElementById('search-input').value.toLowerCase();
+                    filterAndUpdateTable(csvData[csvId].rows, searchTerm, csvId);
+                    
+                    return;
+                }
+                
+                // If we get here, all filters have been cleared
+                // Filter rows based on selected managers
+                let filteredRows = csvData.user_engagement.rows;
+                for (let i = 2; i <= 7; i++) {
+                    if (filterState[i]) {
+                        const filter = managerFilters.find(f => parseInt(f.getAttribute('data-level')) === i);
+                        const columnIndex = parseInt(filter.getAttribute('data-column'));
+                        filteredRows = filteredRows.filter(row => row[columnIndex] === filterState[i]);
+                    }
+                }
+                
+                // Update all dropdowns based on the filtered rows
+                updateAllDropdowns(filteredRows, filterState);
+            }
+            
+            function resetManagerDropdowns(csvId) {
+                const allRows = csvData.user_engagement.rows;
+                const managerFilters = Array.from(document.querySelectorAll('.manager-filter'));
+                
+                // Update each dropdown with all available options from the full dataset
+                managerFilters.forEach(filter => {
+                    const level = parseInt(filter.getAttribute('data-level'));
+                    const columnIndex = parseInt(filter.getAttribute('data-column'));
+                    
+                    // Get all unique manager names for this level
+                    const managers = [...new Set(allRows.map(row => row[columnIndex]).filter(Boolean))].sort();
+                    
+                    // Clear existing options
+                    filter.innerHTML = '<option value="">All</option>';
+                    
+                    // Add all options
+                    managers.forEach(manager => {
+                        const option = document.createElement('option');
+                        option.value = manager;
+                        option.textContent = manager;
+                        filter.appendChild(option);
+                    });
+                });
+            }
+            
+            function updateAllDropdowns(filteredRows, filterState) {
+                const managerFilters = Array.from(document.querySelectorAll('.manager-filter'));
+                
+                // Update options for all levels
+                for (let i = 2; i <= 7; i++) {
+                    const filter = managerFilters.find(f => parseInt(f.getAttribute('data-level')) === i);
+                    if (filter) {
+                        const columnIndex = parseInt(filter.getAttribute('data-column'));
+                        
+                        // Get unique manager names for this level from the filtered rows
+                        const managers = [...new Set(filteredRows.map(row => row[columnIndex]).filter(Boolean))].sort();
+                        
+                        // Save current selection
+                        const currentSelection = filter.value;
+                        
+                        // Clear existing options
+                        filter.innerHTML = '<option value="">All</option>';
+                        
+                        // Add new options
+                        managers.forEach(manager => {
+                            const option = document.createElement('option');
+                            option.value = manager;
+                            option.textContent = manager;
+                            if (manager === currentSelection && managers.includes(currentSelection)) {
+                                option.selected = true;
+                            }
+                            filter.appendChild(option);
+                        });
+                        
+                        // If the current selection is not in the new options, reset it
+                        if (currentSelection && !managers.includes(currentSelection)) {
+                            filter.value = '';
+                            filterState[i] = '';
+                        }
+                    }
                 }
             }
             
-            function setupPagination(rows) {
-                const nextBtn = document.getElementById('next-page');
+            function updatePaginationControls(currentPage, totalPages) {
+                const pageCount = document.getElementById('page-count');
                 const prevBtn = document.getElementById('prev-page');
-                if (!nextBtn || !prevBtn) return;
+                const nextBtn = document.getElementById('next-page');
                 
-                let currentPage = 0;
+                if (pageCount) {
+                    pageCount.textContent = `Page ${currentPage + 1} of ${totalPages}`;
+                }
+                
+                if (prevBtn) {
+                    prevBtn.disabled = currentPage === 0;
+                }
+                
+                if (nextBtn) {
+                    nextBtn.disabled = currentPage >= totalPages - 1;
+                }
+            }
+
+            function setupPagination(rows) {
+                const paginationDiv = document.getElementById('pagination');
+                if (!paginationDiv) return;
+                
+                // Clear any existing pagination content
+                paginationDiv.innerHTML = '';
+                
                 const totalPages = Math.ceil(rows.length / 10);
                 
-                nextBtn.addEventListener('click', () => {
-                    currentPage++;
-                    updateTable(rows, currentPage);
+                // Only show pagination if there are multiple pages
+                if (totalPages > 1) {
+                    paginationDiv.style.display = 'flex';
+                    
+                    // Create pagination controls
+                    paginationDiv.innerHTML = `
+                        <button id="prev-page" class="page-button" disabled>&lt; Previous</button>
+                        <div id="page-count" class="page-count">Page 1 of ${totalPages}</div>
+                        <button id="next-page" class="page-button">Next &gt;</button>
+                    `;
+                    
+                    const nextBtn = document.getElementById('next-page');
+                    const prevBtn = document.getElementById('prev-page');
+                    
+                    let currentPage = 0;
+                    
+                    nextBtn.addEventListener('click', () => {
+                        currentPage++;
+                        updateTable(rows, currentPage);
+                        updatePaginationControls(currentPage, totalPages);
+                    });
+                    
+                    prevBtn.addEventListener('click', () => {
+                        currentPage--;
+                        updateTable(rows, currentPage);
+                        updatePaginationControls(currentPage, totalPages);
+                    });
+                    
+                    // Initialize pagination controls
                     updatePaginationControls(currentPage, totalPages);
-                });
-                
-                prevBtn.addEventListener('click', () => {
-                    currentPage--;
-                    updateTable(rows, currentPage);
-                    updatePaginationControls(currentPage, totalPages);
-                });
-                
-                // Initialize pagination controls
-                updatePaginationControls(currentPage, totalPages);
+                } else {
+                    paginationDiv.style.display = 'none';
+                }
             }
-            
+
             function updateTable(rows, page) {
                 const tableBody = document.querySelector('#data-table tbody');
                 const start = page * 10;
                 const end = start + 10;
                 const rowsToShow = rows.slice(start, end);
                 
+                // Get the current CSV ID
+                const searchInput = document.getElementById('search-input');
+                const csvId = searchInput ? searchInput.getAttribute('data-csv-id') : null;
+                
+                // Check if the non_engaged_users data already has manager columns
+                const hasManagerColumns = csvId === 'non_engaged_users' && 
+                    csvData[csvId].headers.some(header => header.startsWith('manager_'));
+                
                 let html = '';
                 rowsToShow.forEach(row => {
                     html += '<tr>';
+                    
+                    // Add the original cells
                     row.forEach(cell => {
                         html += `<td>${cell}</td>`;
                     });
+                    
+                    // For non_engaged_users, add manager cells only if they don't already exist in the data
+                    if (csvId === 'non_engaged_users' && !hasManagerColumns) {
+                        // Add manager cells from userManagerMap
+                        const displayNameIndex = csvData[csvId].headers.indexOf('display_name');
+                        const userName = row[displayNameIndex];
+                        
+                        // Get manager columns from user_engagement
+                        const userEngagementHeaders = csvData.user_engagement.headers;
+                        for (let i = 2; i <= 7; i++) {
+                            const managerHeader = `manager_${i}`;
+                            if (userEngagementHeaders.includes(managerHeader)) {
+                                const managerValue = userManagerMap[userName] && userManagerMap[userName][managerHeader] 
+                                    ? userManagerMap[userName][managerHeader] 
+                                    : '';
+                                html += `<td>${managerValue}</td>`;
+                            }
+                        }
+                    }
+                    
                     html += '</tr>';
                 });
                 
                 tableBody.innerHTML = html;
             }
             
-            function updatePaginationControls(currentPage, totalPages) {
-                const pageInfo = document.getElementById('page-info');
-                const prevBtn = document.getElementById('prev-page');
-                const nextBtn = document.getElementById('next-page');
+            function buildUserManagerMap() {
+                // Create a mapping from display_name to manager information
+                const userEngagementData = csvData.user_engagement;
                 
-                if (!pageInfo || !prevBtn || !nextBtn) return;
+                // Check if we have manager columns
+                const managerColumns = [];
+                for (let i = 2; i <= 7; i++) {
+                    const colIndex = userEngagementData.headers.indexOf(`manager_${i}`);
+                    if (colIndex !== -1) {
+                        managerColumns.push({ level: i, index: colIndex });
+                    }
+                }
                 
-                pageInfo.textContent = `Page ${currentPage + 1} of ${totalPages}`;
-                prevBtn.disabled = currentPage === 0;
-                nextBtn.disabled = currentPage === totalPages - 1;
-            }
-            
-            function updatePagination(rows) {
-                const totalPages = Math.ceil(rows.length / 10);
-                updatePaginationControls(0, totalPages);
-                setupPagination(rows);
+                // If we have manager columns, build the mapping
+                if (managerColumns.length > 0) {
+                    const displayNameIndex = userEngagementData.headers.indexOf('display_name');
+                    
+                    userEngagementData.rows.forEach(row => {
+                        const userName = row[displayNameIndex];
+                        if (userName) {
+                            userManagerMap[userName] = {};
+                            
+                            managerColumns.forEach(col => {
+                                if (row[col.index]) {
+                                    userManagerMap[userName][`manager_${col.level}`] = row[col.index];
+                                }
+                            });
+                        }
+                    });
+                    
+                    console.log('User-Manager mapping built:', userManagerMap);
+                }
             }
 
             // Add event listener for the Generate button
