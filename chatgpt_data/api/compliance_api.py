@@ -130,6 +130,21 @@ class EnterpriseComplianceAPI:
             # If it's already a simplified 404 error for GPTs/projects, just raise it
             if str(e).startswith(("GPT not found", "Project not found")):
                 raise
+                
+            # Handle 400 Bad Request errors for invalid IDs
+            if e.response.status_code == 400:
+                response_text = e.response.text if hasattr(e.response, 'text') else ""
+                
+                # Check if this is an invalid GPT or project ID error
+                if "Invalid gpt_id" in response_text and "/gpts/" in endpoint:
+                    gpt_id = endpoint.split('/gpts/')[-1].split('/')[0]
+                    print(f"Invalid GPT ID format: {gpt_id}")
+                    raise requests.exceptions.HTTPError(f"GPT not found", response=e.response)
+                    
+                elif "Invalid project_id" in response_text and "/projects/" in endpoint:
+                    project_id = endpoint.split('/projects/')[-1].split('/')[0]
+                    print(f"Invalid project ID format: {project_id}")
+                    raise requests.exceptions.HTTPError(f"Project not found", response=e.response)
             
             # For other errors, provide detailed information
             error_message = f"HTTP Error: {e}"
@@ -502,10 +517,7 @@ class EnterpriseComplianceAPI:
             gpt_id: The ID of the GPT
             
         Returns:
-            The builder name of the GPT, or the GPT ID if not found
-            
-        Raises:
-            Exception: If the API request fails and mock data is not allowed
+            The builder name of the GPT, or "External or Deleted" if not found
         """
         try:
             # Make the API request to get GPT configurations
@@ -522,13 +534,16 @@ class EnterpriseComplianceAPI:
                 # Return the name from the first configuration
                 return configs[0].get("name", gpt_id)
             else:
-                # If no configurations found, return the ID
-                return gpt_id
+                # If no configurations found, return "External or Deleted"
+                return "External or Deleted"
             
         except requests.exceptions.HTTPError as e:
-            # If this is our simplified 404 error, just return the ID
-            if str(e).startswith("GPT not found"):
-                return gpt_id
+            # If this is our simplified 404 error or a 400 with 'Invalid gpt_id', return "External or Deleted"
+            if str(e).startswith("GPT not found") or (
+                e.response.status_code == 400 and 
+                "Invalid gpt_id" in e.response.text
+            ):
+                return "External or Deleted"
             
             # For other errors, log and handle as before
             error_msg = str(e)
@@ -538,8 +553,8 @@ class EnterpriseComplianceAPI:
                 print(f"Using mock GPT name for {gpt_id}")
                 return f"Mock GPT {gpt_id}"
             else:
-                # If mock data is not allowed, return the ID
-                return gpt_id
+                # If mock data is not allowed, return "External or Deleted"
+                return "External or Deleted"
     
     def get_project_name(self, project_id: str) -> str:
         """Get the builder name of a project by its ID.
@@ -548,10 +563,7 @@ class EnterpriseComplianceAPI:
             project_id: The ID of the project
             
         Returns:
-            The builder name of the project, or the project ID if not found
-            
-        Raises:
-            Exception: If the API request fails and mock data is not allowed
+            The builder name of the project, or "External or Deleted" if not found
         """
         try:
             # Make the API request to get project configurations
@@ -568,13 +580,16 @@ class EnterpriseComplianceAPI:
                 # Return the name from the first configuration
                 return configs[0].get("name", project_id)
             else:
-                # If no configurations found, return the ID
-                return project_id
+                # If no configurations found, return "External or Deleted"
+                return "External or Deleted"
             
         except requests.exceptions.HTTPError as e:
-            # If this is our simplified 404 error, just return the ID
-            if str(e).startswith("Project not found"):
-                return project_id
+            # If this is our simplified 404 error or a 400 with 'Invalid project_id', return "External or Deleted"
+            if str(e).startswith("Project not found") or (
+                e.response.status_code == 400 and 
+                "Invalid project_id" in e.response.text
+            ):
+                return "External or Deleted"
             
             # For other errors, log and handle as before
             error_msg = str(e)
@@ -584,8 +599,8 @@ class EnterpriseComplianceAPI:
                 print(f"Using mock project name for {project_id}")
                 return f"Mock Project {project_id}"
             else:
-                # If mock data is not allowed, return the ID
-                return project_id
+                # If mock data is not allowed, return "External or Deleted"
+                return "External or Deleted"
 
     def _extract_message_text(self, message: Dict[str, Any]) -> str:
         """Extract text content from a message.

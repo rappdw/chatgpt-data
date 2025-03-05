@@ -60,6 +60,60 @@ def datetime_to_unix_timestamp(dt: datetime) -> int:
     return int(dt.timestamp())
 
 
+def determine_cadence(start_date: datetime, end_date: datetime) -> str:
+    """Determine the cadence based on the time span between start_date and end_date.
+    
+    Args:
+        start_date: The start date of the period
+        end_date: The end date of the period
+        
+    Returns:
+        String indicating the cadence (daily, weekly, bi-weekly, monthly, quarterly, etc.)
+    """
+    if not start_date or not end_date:
+        return "unknown"
+        
+    # Calculate the time difference in days
+    time_diff = (end_date - start_date).days
+    
+    # Determine cadence based on the time span
+    if time_diff < 2:
+        return "daily"
+    elif time_diff <= 7:
+        return "weekly"
+    elif time_diff <= 14:
+        return "bi-weekly"
+    elif time_diff <= 31:
+        return "monthly"
+    elif time_diff <= 92:
+        return "quarterly"
+    elif time_diff <= 183:
+        return "semi-annual"
+    else:
+        return "annual"
+
+
+def map_user_status(status: str) -> str:
+    """Map API status values to the expected values.
+    
+    Args:
+        status: Status value from the API
+        
+    Returns:
+        Mapped status value (enabled, pending, deleted)
+    """
+    status_mapping = {
+        "active": "enabled",
+        "enabled": "enabled",
+        "pending": "pending",
+        "deleted": "deleted",
+        "disabled": "deleted",
+        "suspended": "deleted",
+    }
+    
+    return status_mapping.get(status.lower(), "enabled")  # Default to enabled if unknown
+
+
 @dataclass
 class UserActivity:
     conversation_count: int = 0
@@ -73,6 +127,7 @@ class UserActivity:
     project_set: Set[str] = field(default_factory=set)
     system_message_count: int = 0
     assistant_message_count: int = 0
+    first_day_active: int = 0
     last_day_active: int = 0
 
 
@@ -165,6 +220,11 @@ def get_user_engagement(api: EnterpriseComplianceAPI, start_date: datetime, end_
             total_messages_in_range += 1
             convo_in_range = True
             user_metrics.message_count += 1
+            
+            # Update first and last active timestamps
+            if user_metrics.first_day_active == 0 or created_at < user_metrics.first_day_active:
+                user_metrics.first_day_active = created_at
+                
             if user_metrics.last_day_active < created_at:
                 user_metrics.last_day_active = created_at
 
@@ -179,26 +239,35 @@ def get_user_engagement(api: EnterpriseComplianceAPI, start_date: datetime, end_
             # Explicitly track user messages
             if role == "user":
                 user_metrics.user_message_count += 1
-                
+            elif role == "assistant":
+                user_metrics.assistant_message_count += 1
+            elif role == "system":
+                user_metrics.system_message_count += 1
+            elif role == "tool":
+                user_metrics.tool_message_count += 1
+                if tool_name:
+                    user_metrics.tool_set.add(tool_name)
+                else:
+                    user_metrics.tool_set.add("unknown")
+            else:
+                print(f"    Unknown message role, '{role}'. msg: '{msg}'\n\n")
             if gpt_id:
+                # if role != "user":
+                #     print(f" Non-user gpt message. role, '{role}'\nmsg: {msg}\n\n")
                 user_metrics.gpt_message_count += 1
                 user_metrics.gpt_set.add(gpt_id)
                 if gpt_id not in engagement_metrics.gpts:
                     gpt_builder_name = api.get_gpt_name(gpt_id)
                     engagement_metrics.gpts[gpt_id] = gpt_builder_name
             if project_id:
+                # if role != "user":
+                #     print(f" Non-user project message. role, '{role}'\nmsg: {msg}\n\n")
                 user_metrics.project_message_count += 1
                 user_metrics.project_set.add(project_id)
                 if project_id not in engagement_metrics.projects:
                     project_name = api.get_project_name(project_id)
                     engagement_metrics.projects[project_id] = project_name
-            if role == "assistant":
-                user_metrics.assistant_message_count += 1
-            if role == "system":
-                user_metrics.system_message_count += 1
-            if role == "tool" and tool_name:
-                user_metrics.tool_message_count += 1
-                user_metrics.tool_set.add(tool_name)
+
         
         if convo_in_range:
             total_conversations_in_range += 1
@@ -223,7 +292,7 @@ def get_user_engagement(api: EnterpriseComplianceAPI, start_date: datetime, end_
     return engagement_metrics
 
 
-def save_engagement_metrics_to_csv(metrics: EngagementMetrics, output_file: str, end_date: Optional[datetime] = None) -> None:
+def save_engagement_metrics_to_csv(metrics: EngagementMetrics, output_file: str, end_date: Optional[datetime] = None, start_date: Optional[datetime] = None) -> None:
     """Save user engagement metrics to a CSV file.
     
     Args:
@@ -231,6 +300,7 @@ def save_engagement_metrics_to_csv(metrics: EngagementMetrics, output_file: str,
         output_file: Path to output CSV file
         end_date: Optional end date of the reporting period. If provided, users created after this date
                  will be excluded from the non-engaged users report.
+        start_date: Optional start date of the reporting period. Used for determining cadence.
         
     This function creates two CSV files:
     1. The main engagement metrics file with the name provided in output_file
@@ -245,6 +315,11 @@ def save_engagement_metrics_to_csv(metrics: EngagementMetrics, output_file: str,
         # Get user info - handle the case when user might be None
         user = metrics.users.get(user_id)
         
+        # Create display name (use name if available, otherwise email)
+        display_name = getattr(user, 'name', "") if user else ""
+        if not display_name and user:
+            display_name = getattr(user, 'email', "")
+        
         # Convert GPT IDs to names
         gpt_names = [metrics.gpts.get(gpt_id, str(gpt_id)) for gpt_id in activity.gpt_set if gpt_id is not None]
         
@@ -254,32 +329,75 @@ def save_engagement_metrics_to_csv(metrics: EngagementMetrics, output_file: str,
         # Convert tool IDs to names (no mapping needed)
         tool_names = [str(tool_id) for tool_id in activity.tool_set if tool_id is not None]
         
+        # Get last active timestamp
+        last_active_timestamp = activity.last_day_active
+        last_active_str = datetime.fromtimestamp(last_active_timestamp).strftime("%Y-%m-%d") if last_active_timestamp else ""
+        
+        # Get first active timestamp
+        first_active_timestamp = activity.first_day_active
+        first_active_str = datetime.fromtimestamp(first_active_timestamp).strftime("%Y-%m-%d") if first_active_timestamp else ""
+        
+        # Get created_at timestamp
+        created_at = getattr(user, 'created_at', None) if user else None
+        created_at_str = datetime.fromtimestamp(created_at).strftime("%Y-%m-%d") if created_at else ""
+        
+        # Determine cadence based on start_date and end_date
+        cadence = determine_cadence(start_date, end_date) if start_date and end_date else "unknown"
+        
+        # Get organization ID (account_id)
+        account_id = getattr(user, 'organization_id', "") if user else ""
+        
+        # Format period start and end dates
+        period_start = start_date if start_date else None
+        period_end = end_date if end_date else None
+        period_start_str = period_start.strftime("%Y-%m-%d") if period_start else ""
+        period_end_str = period_end.strftime("%Y-%m-%d") if period_end else ""
+        
+        # Map user status to expected values
+        user_status = getattr(user, 'status', "") if user else ""
+        mapped_status = map_user_status(user_status)
+        
         row = {
-            "user_id": user_id,
+            "cadence": cadence,
+            "period_start": period_start_str,
+            "period_end": period_end_str,
+            "account_id": account_id,
+            "public_id": user_id,
+            "name": display_name,
             "email": getattr(user, 'email', "") if user else "",
-            "name": getattr(user, 'name', "") if user else "",
-            "role": getattr(user, 'role', "") if user else "",
-            "status": getattr(user, 'status', "") if user else "",
-            "conversation_count": activity.conversation_count,
-            "message_count": activity.message_count,
-            "user_message_count": activity.user_message_count,
+            "role": "",
+            "user_role": getattr(user, 'role', "") if user else "",
+            "department": "",  # Empty string as requested
+            "user_status": mapped_status,
+            "created_or_invited_date": created_at_str,
+            "is_active": 1,  # User has messages in the period
+            "first_day_active_in_period": first_active_str,
+            "last_day_active_in_period": last_active_str,
+            "messages": activity.user_message_count,
+            "message_rank": 0,
+            "gpt_messages": activity.gpt_message_count,
+            "gpts_messaged": len(activity.gpt_set),
+            "tool_messages": activity.tool_message_count,
+            "tools_messaged": len(activity.tool_set),
+            "last_day_active": last_active_str,
+            "project_messages": activity.project_message_count,
+            "projects_messaged": len(activity.project_set),
             "assistant_message_count": activity.assistant_message_count,
-            "gpt_message_count": activity.gpt_message_count,
-            "project_message_count": activity.project_message_count,
             "system_message_count": activity.system_message_count,
-            "tool_message_count": activity.tool_message_count,
-            "last_active": datetime.fromtimestamp(activity.last_day_active).strftime("%Y-%m-%d %H:%M:%S") if activity.last_day_active else "",
-            "unique_gpt_models": len(activity.gpt_set),
-            "unique_tools": len(activity.tool_set),
-            "unique_projects": len(activity.project_set),
+            "total_message_count": activity.message_count,
+            "conversation_count": activity.conversation_count,
             "gpt_models": ",".join(gpt_names) if gpt_names else "",
             "tools": ",".join(tool_names) if tool_names else "",
             "projects": ",".join(project_names) if project_names else "",
         }
         active_rows.append(row)
     
-    # Sort rows by message count (descending)
-    active_rows.sort(key=lambda x: x["message_count"], reverse=True)
+    # Sort rows by messages (descending)
+    active_rows.sort(key=lambda x: x["messages"], reverse=True)
+    
+    # Add message rank based on sort order
+    for i, row in enumerate(active_rows):
+        row["message_rank"] = i + 1  # 1-based ranking
     
     # Write to CSV
     if active_rows:
@@ -312,13 +430,63 @@ def save_engagement_metrics_to_csv(metrics: EngagementMetrics, output_file: str,
             continue
             
         if user_id not in metrics.user_activity:
+            # Create display name (use name if available, otherwise email)
+            display_name = getattr(user, 'name', "") if user else ""
+            if not display_name and user:
+                display_name = getattr(user, 'email', "")
+                
+            # Get created_at timestamp
+            created_at = getattr(user, 'created_at', None) if user else None
+            created_at_str = datetime.fromtimestamp(created_at).strftime("%Y-%m-%d") if created_at else ""
+            
+            # Determine cadence based on start_date and end_date
+            cadence = determine_cadence(start_date, end_date) if start_date and end_date else "unknown"
+            
+            # Get organization ID (account_id)
+            account_id = getattr(user, 'organization_id', "") if user else ""
+            
+            # Format period start and end dates
+            period_start = start_date if start_date else None
+            period_end = end_date if end_date else None
+            period_start_str = period_start.strftime("%Y-%m-%d") if period_start else ""
+            period_end_str = period_end.strftime("%Y-%m-%d") if period_end else ""
+            
+            # Map user status to expected values
+            user_status = getattr(user, 'status', "") if user else ""
+            mapped_status = map_user_status(user_status)
+            
             row = {
-                "user_id": user_id,
+                "cadence": cadence,
+                "period_start": period_start_str,
+                "period_end": period_end_str,
+                "account_id": account_id,
+                "public_id": user_id,
+                "name": display_name,
                 "email": getattr(user, 'email', "") if user else "",
-                "name": getattr(user, 'name', "") if user else "",
-                "role": getattr(user, 'role', "") if user else "",
-                "status": getattr(user, 'status', "") if user else "",
-                "created_at": datetime.fromtimestamp(user.created_at).strftime("%Y-%m-%d %H:%M:%S") if hasattr(user, 'created_at') and user.created_at else "",
+                "role": "",
+                "user_role": getattr(user, 'role', "") if user else "",
+                "department": "",  # Empty string as requested
+                "user_status": mapped_status,
+                "created_or_invited_date": created_at_str,
+                "is_active": 0,  # User has no messages in the period
+                "first_day_active_in_period": "",
+                "last_day_active_in_period": "",
+                "messages": 0,
+                "message_rank": 0,
+                "gpt_messages": 0,
+                "gpts_messaged": 0,
+                "tool_messages": 0,
+                "tools_messaged": 0,
+                "last_day_active": "",
+                "project_messages": 0,
+                "projects_messaged": 0,
+                "conversation_count": 0,
+                "user_message_count": 0,
+                "assistant_message_count": 0,
+                "system_message_count": 0,
+                "gpt_models": "",
+                "tools": "",
+                "projects": "",
             }
             non_engaged_rows.append(row)
     
@@ -458,7 +626,8 @@ def main() -> None:
             save_engagement_metrics_to_csv(
                 metrics=engagement_metrics,
                 output_file=output_file,
-                end_date=args.end_date
+                end_date=args.end_date,
+                start_date=args.start_date
             )
             downloaded_files.append(output_file)
             
