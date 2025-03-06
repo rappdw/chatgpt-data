@@ -420,7 +420,7 @@ def save_engagement_metrics_to_csv(metrics: EngagementMetrics, output_dir: str, 
     
     # Write to CSV
     if active_rows:
-        output_file = os.path.join(output_dir, f"user_enagement_{date_range_str}.csv")
+        output_file = os.path.join(output_dir, f"user_engagement_{date_range_str}.csv")
         with open(output_file, 'w', newline='') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=active_rows[0].keys())
             writer.writeheader()

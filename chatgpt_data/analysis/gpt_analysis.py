@@ -1,6 +1,7 @@
 """GPT engagement analysis module."""
 
 import os
+import fnmatch
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -25,7 +26,7 @@ class GPTAnalysis:
 
     def _load_data(self) -> None:
         """Load all GPT engagement data files."""
-        gpt_files = [f for f in os.listdir(self.data_dir) if f.startswith("proofpoint_gpt_engagement")]
+        gpt_files = [f for f in os.listdir(self.data_dir) if fnmatch.fnmatch(f, '*gpt_engagement*.csv')]
         
         dfs = []
         for file in gpt_files:

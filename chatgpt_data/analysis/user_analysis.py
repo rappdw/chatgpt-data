@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 import re
+import fnmatch
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -34,8 +35,8 @@ class UserAnalysis:
 
     def _load_data(self) -> None:
         """Load all user engagement data files."""
-        user_files = [f for f in os.listdir(self.data_dir) if f.startswith("proofpoint_user_engagement")]
-        
+        user_files = [f for f in os.listdir(self.data_dir) if fnmatch.fnmatch(f, '*user_engagement*.csv')]
+
         dfs = []
         for file in user_files:
             try:
