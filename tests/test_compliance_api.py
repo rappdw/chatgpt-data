@@ -300,3 +300,142 @@ def test_delete_conversation_with_mock_data(mock_make_request):
         endpoint="compliance/workspaces/test-workspace/conversations/test-conversation-id",
         method="DELETE"
     )
+
+
+import requests
+import sys
+import time
+
+@patch('requests.request')
+@patch('time.sleep')  # Mock sleep to avoid waiting during tests
+@patch('sys.exit')   # Mock sys.exit to prevent test from exiting
+def test_retry_mechanism_for_server_errors(mock_exit, mock_sleep, mock_request):
+    """Test that the retry mechanism works correctly for server errors."""
+    # Create a mock response with a 500 status code
+    mock_response = MagicMock()
+    mock_response.status_code = 500
+    mock_response.text = "Internal Server Error"
+    mock_response.json.side_effect = ValueError("No JSON data")
+    
+    # Make the request method raise an HTTPError with the 500 response
+    mock_request.return_value = mock_response
+    mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("500 Server Error", response=mock_response)
+    
+    # Create an API client
+    api = EnterpriseComplianceAPI(
+        api_key="test-api-key",
+        org_id="test-org-id",
+        workspace_id="test-workspace",
+        allow_mock_data=False
+    )
+    
+    # Call a method that uses _make_request
+    try:
+        api.list_conversations()
+    except Exception:
+        pass  # We expect an exception or sys.exit
+    
+    # Verify that request was called 4 times (original + 3 retries)
+    assert mock_request.call_count == 4
+    
+    # Verify that sleep was called three times (once after each of the first 3 failures)
+    assert mock_sleep.call_count == 3
+    
+    # Verify that sleep was called with exponential backoff (2^1=2, 2^2=4, 2^3=8)
+    mock_sleep.assert_any_call(2)  # First retry
+    mock_sleep.assert_any_call(4)  # Second retry
+    mock_sleep.assert_any_call(8)  # Third retry
+    
+    # Verify that sys.exit was called after max retries
+    mock_exit.assert_called_once_with(1)
+
+
+@patch('requests.request')
+@patch('time.sleep')  # Mock sleep to avoid waiting during tests
+def test_retry_mechanism_success_after_retry(mock_sleep, mock_request):
+    """Test that the retry mechanism succeeds after a retry."""
+    # Create a failed response with a 500 status code
+    failed_response = MagicMock()
+    failed_response.status_code = 500
+    failed_response.text = "Internal Server Error"
+    failed_response.json.side_effect = ValueError("No JSON data")
+    failed_response.raise_for_status.side_effect = requests.exceptions.HTTPError("500 Server Error", response=failed_response)
+    
+    # Create a successful response for the second attempt
+    success_data = {
+        "object": "list",
+        "data": [
+            {
+                "id": "conv-1",
+                "messages": {
+                    "data": [
+                        {"id": "msg-1", "role": "user", "created_at": int(datetime.now(DEFAULT_TIMEZONE).timestamp()) - 3600}
+                    ]
+                }
+            }
+        ],
+        "has_more": False
+    }
+    success_response = MagicMock()
+    success_response.status_code = 200
+    success_response.json.return_value = success_data
+    
+    # Set up the mock to fail once then succeed
+    mock_request.side_effect = [failed_response, success_response]
+    
+    # Create an API client
+    api = EnterpriseComplianceAPI(
+        api_key="test-api-key",
+        org_id="test-org-id",
+        workspace_id="test-workspace",
+        allow_mock_data=False
+    )
+    
+    # Call a method that uses _make_request
+    response = api.list_conversations()
+    
+    # Verify that request was called twice (original + 1 retry)
+    assert mock_request.call_count == 2
+    
+    # Verify that sleep was called once (after the first failure)
+    mock_sleep.assert_called_once_with(2)  # First retry with 2^1=2 seconds delay
+    
+    # Verify we got the successful response
+    assert response == success_data
+
+
+@patch('requests.request')
+@patch('time.sleep')  # Mock sleep to avoid waiting during tests
+@patch('sys.exit')   # Mock sys.exit to prevent test from exiting
+def test_retry_mechanism_for_timeout_errors(mock_exit, mock_sleep, mock_request):
+    """Test that the retry mechanism works correctly for timeout errors."""
+    # Make the request method raise a Timeout exception
+    mock_request.side_effect = requests.exceptions.Timeout("Request timed out")
+    
+    # Create an API client
+    api = EnterpriseComplianceAPI(
+        api_key="test-api-key",
+        org_id="test-org-id",
+        workspace_id="test-workspace",
+        allow_mock_data=False
+    )
+    
+    # Call a method that uses _make_request
+    try:
+        api.list_conversations()
+    except Exception:
+        pass  # We expect an exception or sys.exit
+    
+    # Verify that request was called 4 times (original + 3 retries)
+    assert mock_request.call_count == 4
+    
+    # Verify that sleep was called three times (once after each of the first 3 failures)
+    assert mock_sleep.call_count == 3
+    
+    # Verify that sleep was called with exponential backoff (2^1=2, 2^2=4, 2^3=8)
+    mock_sleep.assert_any_call(2)  # First retry
+    mock_sleep.assert_any_call(4)  # Second retry
+    mock_sleep.assert_any_call(8)  # Third retry
+    
+    # Verify that sys.exit was called after max retries
+    mock_exit.assert_called_once_with(1)

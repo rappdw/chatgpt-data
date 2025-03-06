@@ -38,4 +38,4 @@ Thumbs.db
 .ipynb_checkpoints
 
 .env
-rawdata.pfpt
+rawdata.pfpt*

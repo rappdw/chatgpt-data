@@ -85,7 +85,8 @@ class EnterpriseComplianceAPI:
         method: str = "GET", 
         params: Optional[Dict[str, Any]] = None, 
         json_data: Optional[Dict[str, Any]] = None, 
-        timeout: int = 30
+        timeout: int = 30,
+        _retry_count: int = 0  # Internal parameter to track retry attempts
     ) -> Dict[str, Any]:
         """Make a request to the Enterprise API.
 
@@ -95,14 +96,17 @@ class EnterpriseComplianceAPI:
             params: Query parameters
             json_data: JSON data for POST requests
             timeout: Request timeout in seconds
+            _retry_count: Internal parameter to track retry attempts
 
         Returns:
             API response as a dictionary
 
         Raises:
-            Exception: If the API request fails
+            Exception: If the API request fails after retries
+            SystemExit: If server errors persist after 3 retries
         """
         url = urljoin(self.BASE_URL, endpoint)
+        max_retries = 3
         
         try:
             response = requests.request(
@@ -148,6 +152,9 @@ class EnterpriseComplianceAPI:
                     print(f"Invalid project ID format: {project_id}")
                     raise requests.exceptions.HTTPError(f"Project not found", response=e.response)
             
+            # Check if this is a server error (5xx) that should be retried
+            is_server_error = e.response.status_code >= 500
+            
             # For other errors, provide detailed information
             error_message = f"HTTP Error: {e}"
             
@@ -173,17 +180,79 @@ class EnterpriseComplianceAPI:
                 print(f"Request parameters: {params}")
             if json_data:
                 print(f"JSON Data: {json_data}")
+            
+            # Handle retry logic for server errors
+            if is_server_error and _retry_count < max_retries:
+                _retry_count += 1
+                retry_delay = 2 ** _retry_count  # Exponential backoff: 2, 4, 8 seconds
+                print(f"Server error encountered. Retrying in {retry_delay} seconds... (Attempt {_retry_count}/{max_retries})")
+                import time
+                time.sleep(retry_delay)
+                return self._make_request(
+                    endpoint=endpoint,
+                    method=method,
+                    params=params,
+                    json_data=json_data,
+                    timeout=timeout,
+                    _retry_count=_retry_count
+                )
+            elif is_server_error and _retry_count >= max_retries:
+                print(f"Server error persisted after {max_retries} retry attempts. Exiting program.")
+                import sys
+                sys.exit(1)  # Exit with error code 1
                 
             raise Exception(f"API request failed: {error_message}")
         except requests.exceptions.Timeout:
             print(f"Request timed out after {timeout} seconds")
             print(f"URL: {url}")
             print(f"Method: {method}")
+            
+            # Handle retry logic for timeouts
+            if _retry_count < max_retries:
+                _retry_count += 1
+                retry_delay = 2 ** _retry_count  # Exponential backoff
+                print(f"Request timed out. Retrying in {retry_delay} seconds... (Attempt {_retry_count}/{max_retries})")
+                import time
+                time.sleep(retry_delay)
+                return self._make_request(
+                    endpoint=endpoint,
+                    method=method,
+                    params=params,
+                    json_data=json_data,
+                    timeout=timeout,
+                    _retry_count=_retry_count
+                )
+            elif _retry_count >= max_retries:
+                print(f"Request timeout persisted after {max_retries} retry attempts. Exiting program.")
+                import sys
+                sys.exit(1)  # Exit with error code 1
+                
             raise Exception(f"Request timed out after {timeout} seconds")
         except requests.exceptions.RequestException as e:
-            # Handle other request exceptions (connection errors, timeouts, etc.)
+            # Handle other request exceptions (connection errors, etc.)
             print(f"Request Error: {str(e)}")
             print(f"URL: {url}")
+            
+            # Handle retry logic for general request exceptions
+            if _retry_count < max_retries:
+                _retry_count += 1
+                retry_delay = 2 ** _retry_count  # Exponential backoff
+                print(f"Request error encountered. Retrying in {retry_delay} seconds... (Attempt {_retry_count}/{max_retries})")
+                import time
+                time.sleep(retry_delay)
+                return self._make_request(
+                    endpoint=endpoint,
+                    method=method,
+                    params=params,
+                    json_data=json_data,
+                    timeout=timeout,
+                    _retry_count=_retry_count
+                )
+            elif _retry_count >= max_retries:
+                print(f"Request error persisted after {max_retries} retry attempts. Exiting program.")
+                import sys
+                sys.exit(1)  # Exit with error code 1
+                
             raise Exception(f"Request failed: {str(e)}")
     
     def get_users(self, after: Optional[str] = None, limit: Optional[int] = None) -> Dict[str, Any]:
