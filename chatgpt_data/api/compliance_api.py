@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union, Any, Iterator
 import csv
 import requests
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import pandas as pd
 from urllib.parse import urljoin
 
@@ -20,6 +20,7 @@ class User:
     role: str
     created_at: float
     status: str
+    conversations: List[str] = field(default_factory=list)
 
 
 class EnterpriseComplianceAPI:
@@ -292,7 +293,7 @@ class EnterpriseComplianceAPI:
     
     def get_conversations(
         self, 
-        since_timestamp: Optional[int] = None,
+        since_timestamp: int = 0,
         after: Optional[str] = None,
         limit: Optional[int] = None,
         users: Optional[List[str]] = None,
@@ -328,6 +329,8 @@ class EnterpriseComplianceAPI:
                 params["after"] = after
             elif since_timestamp:
                 params["since_timestamp"] = since_timestamp
+            else:
+                params["since_timestamp"] = 0
                 
             # Add users filter if provided
             if users:
@@ -406,7 +409,7 @@ class EnterpriseComplianceAPI:
     def process_all_conversations(
         self, 
         callback_fn: callable,
-        since_timestamp: Optional[int] = None,
+        since_timestamp: int = 0,
         users: Optional[List[str]] = None,
         file_format: str = "url",
         max_retries: int = 3,
@@ -478,6 +481,9 @@ class EnterpriseComplianceAPI:
                         processed_ids.add(conversation_id)
                         processed_count += 1
                     except Exception as e:
+                        # print stack trace
+                        import traceback
+                        print(traceback.format_exc())
                         print(f"Error processing conversation {conversation_id}: {str(e)}")
                 
                 # Check if we need to fetch more pages
