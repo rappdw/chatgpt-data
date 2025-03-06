@@ -12,6 +12,9 @@ import pandas as pd
 import json
 from rapidfuzz import fuzz, process
 
+# Import the default timezone for consistent datetime handling
+from chatgpt_data.utils.constants import DEFAULT_TIMEZONE
+
 
 class UserAnalysis:
     """Class for analyzing ChatGPT user engagement data."""
@@ -428,8 +431,9 @@ class UserAnalysis:
             .reset_index(name="active_users")
         )
         
-        # Convert period_start to datetime
-        active_users["period_start"] = pd.to_datetime(active_users["period_start"])
+        # Convert period_start to datetime with consistent timezone handling
+        # First convert to UTC, then localize to our default timezone
+        active_users["period_start"] = pd.to_datetime(active_users["period_start"], utc=True).dt.tz_convert(DEFAULT_TIMEZONE)
         
         # Sort by date
         active_users = active_users.sort_values("period_start")
@@ -484,7 +488,7 @@ The trend indicates how user adoption and engagement has changed over time."""
         )
         
         # Convert period_start to datetime
-        message_volume["period_start"] = pd.to_datetime(message_volume["period_start"])
+        message_volume["period_start"] = pd.to_datetime(message_volume["period_start"], utc=True).dt.tz_convert(DEFAULT_TIMEZONE)
         
         # Sort by date
         message_volume = message_volume.sort_values("period_start")
@@ -539,7 +543,7 @@ the impact of new features/promotions on engagement."""
         )
         
         # Convert period_start to datetime
-        gpt_usage["period_start"] = pd.to_datetime(gpt_usage["period_start"])
+        gpt_usage["period_start"] = pd.to_datetime(gpt_usage["period_start"], utc=True).dt.tz_convert(DEFAULT_TIMEZONE)
         
         # Sort by date
         gpt_usage = gpt_usage.sort_values("period_start")
@@ -795,12 +799,12 @@ This helps identify patterns in user engagement and message frequency.{filtered_
         print(f"Rows with null email: {user_avg['email'].isna().sum()}")
         
         # Convert dates to datetime objects for comparison
-        user_avg["first_period_dt"] = pd.to_datetime(user_avg["period_start"])
-        user_avg["last_period_dt"] = pd.to_datetime(user_avg["period_end"])
-        user_avg["created_date"] = pd.to_datetime(user_avg["created_or_invited_date"])
+        user_avg["first_period_dt"] = pd.to_datetime(user_avg["period_start"], utc=True).dt.tz_convert(DEFAULT_TIMEZONE)
+        user_avg["last_period_dt"] = pd.to_datetime(user_avg["period_end"], utc=True).dt.tz_convert(DEFAULT_TIMEZONE)
+        user_avg["created_date"] = pd.to_datetime(user_avg["created_or_invited_date"], utc=True).dt.tz_convert(DEFAULT_TIMEZONE)
         
         # Get all periods in the dataset
-        all_periods = sorted(pd.to_datetime(self.user_data["period_start"].unique()))
+        all_periods = sorted(pd.to_datetime(self.user_data["period_start"].unique(), utc=True).tz_convert(DEFAULT_TIMEZONE))
         
         # Calculate active periods and eligible periods for each user
         active_eligible_periods = []
@@ -808,7 +812,7 @@ This helps identify patterns in user engagement and message frequency.{filtered_
         for _, row in user_avg.iterrows():
             # Get all periods the user appears in the dataset
             user_data = self.user_data[self.user_data["public_id"] == row["public_id"]]
-            user_periods = pd.to_datetime(user_data["period_start"].unique())
+            user_periods = pd.to_datetime(user_data["period_start"].unique(), utc=True).tz_convert(DEFAULT_TIMEZONE)
             
             # Count active periods (where is_active=1)
             active_data = user_data[user_data["is_active"] == 1]

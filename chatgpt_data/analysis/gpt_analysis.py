@@ -8,6 +8,9 @@ from typing import Dict, List, Optional, Tuple, Union
 import matplotlib.pyplot as plt
 import pandas as pd
 
+# Import the default timezone for consistent datetime handling
+from chatgpt_data.utils.constants import DEFAULT_TIMEZONE
+
 
 class GPTAnalysis:
     """Class for analyzing ChatGPT custom GPT engagement data."""
@@ -69,8 +72,9 @@ class GPTAnalysis:
             .reset_index(name="active_gpts")
         )
         
-        # Convert period_start to datetime
-        active_gpts["period_start"] = pd.to_datetime(active_gpts["period_start"])
+        # Convert period_start to datetime with consistent timezone handling
+        # First convert to UTC, then localize to our default timezone
+        active_gpts["period_start"] = pd.to_datetime(active_gpts["period_start"], utc=True).dt.tz_convert(DEFAULT_TIMEZONE)
         
         # Sort by date
         active_gpts = active_gpts.sort_values("period_start")
@@ -124,8 +128,9 @@ The trend indicates how custom GPT adoption and usage has evolved over time."""
             .reset_index()
         )
         
-        # Convert period_start to datetime
-        message_volume["period_start"] = pd.to_datetime(message_volume["period_start"])
+        # Convert period_start to datetime with consistent timezone handling
+        # First convert to UTC, then localize to our default timezone
+        message_volume["period_start"] = pd.to_datetime(message_volume["period_start"], utc=True).dt.tz_convert(DEFAULT_TIMEZONE)
         
         # Sort by date
         message_volume = message_volume.sort_values("period_start")
@@ -179,8 +184,9 @@ had the highest GPT engagement and interaction."""
             .reset_index()
         )
         
-        # Convert period_start to datetime
-        unique_messagers["period_start"] = pd.to_datetime(unique_messagers["period_start"])
+        # Convert period_start to datetime with consistent timezone handling
+        # First convert to UTC, then localize to our default timezone
+        unique_messagers["period_start"] = pd.to_datetime(unique_messagers["period_start"], utc=True).dt.tz_convert(DEFAULT_TIMEZONE)
         
         # Sort by date
         unique_messagers = unique_messagers.sort_values("period_start")

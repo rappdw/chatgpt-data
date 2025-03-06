@@ -1,0 +1,1 @@
+1. Any changes to chatgpt_data/api/compliance_api.py must conform to the API spec found in api_docs/openapi.json

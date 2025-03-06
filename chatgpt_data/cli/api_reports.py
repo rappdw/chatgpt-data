@@ -17,6 +17,7 @@ from pathlib import Path
 
 from chatgpt_data.api.compliance_api import EnterpriseComplianceAPI, User
 from chatgpt_data.cli.all_trends import main as run_all_trends
+from chatgpt_data.utils.constants import DEFAULT_TIMEZONE
 from dotenv import load_dotenv
 
 def parse_date(date_str: str) -> datetime:
@@ -29,7 +30,9 @@ def parse_date(date_str: str) -> datetime:
         Parsed datetime object
     """
     try:
-        return datetime.strptime(date_str, "%Y-%m-%d")
+        # Parse the date and attach our default timezone
+        dt = datetime.strptime(date_str, "%Y-%m-%d")
+        return dt.replace(tzinfo=DEFAULT_TIMEZONE)
     except ValueError:
         raise argparse.ArgumentTypeError(f"Invalid date format: {date_str}. Use YYYY-MM-DD")
 
@@ -41,7 +44,7 @@ def get_default_dates() -> Tuple[datetime, datetime]:
         Tuple of (start_date, end_date) as datetime objects
     """
     # Default end date is today
-    end_date = datetime.now()
+    end_date = datetime.now(DEFAULT_TIMEZONE)
     
     # Default start date is 7 days ago
     start_date = end_date - timedelta(days=7)
@@ -62,6 +65,9 @@ def datetime_to_unix_timestamp(dt: datetime) -> int:
     Returns:
         Unix timestamp (seconds since epoch)
     """
+    # Ensure the datetime is timezone-aware using our default timezone
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=DEFAULT_TIMEZONE)
     return int(dt.timestamp())
 
 
@@ -223,8 +229,8 @@ def get_engagement_metrics(raw_data: RawData) -> EngagementMetrics:
             if conversation_in_range:
                 user_metrics.conversation_count += 1
     
-    # start_date = datetime.fromtimestamp(raw_data.earliest_message_timestamp, tz=timezone.utc).strftime('%Y-%m-%d')
-    # end_date = datetime.fromtimestamp(raw_data.latest_message_timestamp, tz=timezone.utc).strftime('%Y-%m-%d')
+    # start_date = datetime.fromtimestamp(raw_data.earliest_message_timestamp, tz=DEFAULT_TIMEZONE).strftime('%Y-%m-%d')
+    # end_date = datetime.fromtimestamp(raw_data.latest_message_timestamp, tz=DEFAULT_TIMEZONE).strftime('%Y-%m-%d')
     # print(f"Data set in scope: {start_date} to {end_date}")
     # print(f"Total conversations: {total_conversation_count}")
     # print(f"Total messages: {total_message_count}")
@@ -250,7 +256,7 @@ def get_users_conversations(api: EnterpriseComplianceAPI, debug_logging: bool = 
     project_id_to_name = dict()
     gpt_id_to_name = dict()
     # get the unix timestamp of current time
-    earliest_message_timestamp = datetime.now().timestamp()
+    earliest_message_timestamp = datetime.now(DEFAULT_TIMEZONE).timestamp()
     most_recent_message_timestamp = 0
 
     # Process all conversations with a callback function
@@ -357,15 +363,15 @@ def save_engagement_metrics_to_csv(metrics: EngagementMetrics, output_dir: str, 
         
         # Get last active timestamp
         last_active_timestamp = activity.last_day_active
-        last_active_str = datetime.fromtimestamp(last_active_timestamp).strftime("%Y-%m-%d") if last_active_timestamp else ""
+        last_active_str = datetime.fromtimestamp(last_active_timestamp, tz=DEFAULT_TIMEZONE).strftime("%Y-%m-%d") if last_active_timestamp else ""
         
         # Get first active timestamp
         first_active_timestamp = activity.first_day_active
-        first_active_str = datetime.fromtimestamp(first_active_timestamp).strftime("%Y-%m-%d") if first_active_timestamp else ""
+        first_active_str = datetime.fromtimestamp(first_active_timestamp, tz=DEFAULT_TIMEZONE).strftime("%Y-%m-%d") if first_active_timestamp else ""
         
         # Get created_at timestamp
         created_at = user.created_at
-        created_at_str = datetime.fromtimestamp(created_at).strftime("%Y-%m-%d") if created_at else ""
+        created_at_str = datetime.fromtimestamp(created_at, tz=DEFAULT_TIMEZONE).strftime("%Y-%m-%d") if created_at else ""
         
         # Determine cadence based on start_date and end_date
         cadence = determine_cadence(start_date, end_date) if start_date and end_date else "unknown"
@@ -432,8 +438,8 @@ def save_engagement_metrics_to_csv(metrics: EngagementMetrics, output_dir: str, 
 
 def process_engagement_data(raw_data: RawData, output_dir: str) -> None:
     # convert rawdata.earliest_message_timestamp and raw_data.latest_message_timestamp to datetime
-    start_date = datetime.fromtimestamp(raw_data.earliest_message_timestamp)
-    end_date = datetime.fromtimestamp(raw_data.latest_message_timestamp)   
+    start_date = datetime.fromtimestamp(raw_data.earliest_message_timestamp, tz=DEFAULT_TIMEZONE)
+    end_date = datetime.fromtimestamp(raw_data.latest_message_timestamp, tz=DEFAULT_TIMEZONE)   
     print(f"Processing engagement data for date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
     
     user_metrics = get_engagement_metrics(raw_data)
@@ -459,23 +465,29 @@ def process_data_in_weekly_chunks(raw_data: RawData, output_dir: str) -> None:
     """
     
     # Get datetime objects from timestamps
-    raw_start_dt = datetime.fromtimestamp(raw_data.earliest_message_timestamp)
-    raw_end_dt = datetime.fromtimestamp(raw_data.latest_message_timestamp)
+    raw_start_dt = datetime.fromtimestamp(raw_data.earliest_message_timestamp, tz=DEFAULT_TIMEZONE)
+    raw_end_dt = datetime.fromtimestamp(raw_data.latest_message_timestamp, tz=DEFAULT_TIMEZONE)
     
     # Normalize to start of day for start date and end of day for end date
-    current_start = datetime(raw_start_dt.year, raw_start_dt.month, raw_start_dt.day, 0, 0, 0)
-    end_date = datetime(raw_end_dt.year, raw_end_dt.month, raw_end_dt.day, 23, 59, 59)
+    current_start = datetime(raw_start_dt.year, raw_start_dt.month, raw_start_dt.day, 0, 0, 0, tzinfo=DEFAULT_TIMEZONE)
+    end_date = datetime(raw_end_dt.year, raw_end_dt.month, raw_end_dt.day, 23, 59, 59, tzinfo=DEFAULT_TIMEZONE)
     
     while current_start <= end_date:
         # Calculate end of current week (or use end_date if it's sooner)
         week_end = current_start + timedelta(days=6)
         # Set to end of day (23:59:59)
-        current_end = datetime(week_end.year, week_end.month, week_end.day, 23, 59, 59)
+        current_end = datetime(week_end.year, week_end.month, week_end.day, 23, 59, 59, tzinfo=DEFAULT_TIMEZONE)
         # Don't go beyond the overall end date
         if current_end > end_date:
             current_end = end_date
         
         # Create a copy of raw_data with updated timestamps for this chunk
+        # Ensure timezone-aware datetime objects for timestamp conversion
+        if current_start.tzinfo is None:
+            current_start = current_start.replace(tzinfo=DEFAULT_TIMEZONE)
+        if current_end.tzinfo is None:
+            current_end = current_end.replace(tzinfo=DEFAULT_TIMEZONE)
+            
         chunk_data = RawData(
             users=raw_data.users,
             earliest_message_timestamp=current_start.timestamp(),
@@ -501,12 +513,18 @@ def apply_date_filters(raw_data: RawData, start_date: Optional[datetime] = None,
         RawData: The filtered raw data
     """
     if start_date:
-        # Normalize to start of day in UTC
-        start_date = datetime(start_date.year, start_date.month, start_date.day, 0, 0, 0, tzinfo=timezone.utc)
+        # Normalize to start of day using our default timezone
+        start_date = datetime(start_date.year, start_date.month, start_date.day, 0, 0, 0, tzinfo=DEFAULT_TIMEZONE)
+        # Ensure timezone-aware datetime for timestamp conversion
+        if start_date.tzinfo is None:
+            start_date = start_date.replace(tzinfo=DEFAULT_TIMEZONE)
         raw_data.earliest_message_timestamp = start_date.timestamp()
     if end_date:
-        # Normalize to end of day in UTC
-        end_date = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59, tzinfo=timezone.utc)
+        # Normalize to end of day using our default timezone
+        end_date = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59, tzinfo=DEFAULT_TIMEZONE)
+        # Ensure timezone-aware datetime for timestamp conversion
+        if end_date.tzinfo is None:
+            end_date = end_date.replace(tzinfo=DEFAULT_TIMEZONE)
         raw_data.latest_message_timestamp = end_date.timestamp()
     
     return raw_data
@@ -524,7 +542,7 @@ def save_raw_data(raw_data: RawData, output_dir: str) -> tuple[str, str]:
         tuple: Paths to the pickle and JSON files
     """
     # Create a timestamp for the filenames
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(DEFAULT_TIMEZONE).strftime("%Y%m%d_%H%M%S")
     
     # Save as pickle (preserves all object types)
     pickle_path = os.path.join(output_dir, f"raw_data_{timestamp}.pkl")
@@ -595,7 +613,7 @@ def load_existing_data(output_dir: str, force: bool = False) -> tuple[Optional[R
         # Display the available pickle files
         print("\nFound existing data files:")
         for i, file in enumerate(pkl_files[:5]):  # Show at most 5 most recent files
-            file_time = datetime.fromtimestamp(os.path.getmtime(file))
+            file_time = datetime.fromtimestamp(os.path.getmtime(file), tz=DEFAULT_TIMEZONE)
             file_size = os.path.getsize(file) / (1024 * 1024)  # Size in MB
             print(f"{i+1}. {os.path.basename(file)} - {file_time.strftime('%Y-%m-%d %H:%M:%S')} ({file_size:.2f} MB)")
         
@@ -637,8 +655,8 @@ def load_existing_data(output_dir: str, force: bool = False) -> tuple[Optional[R
                 loaded_data = True
                 
                 # Display date range from the loaded data
-                start_dt = datetime.fromtimestamp(raw_data.earliest_message_timestamp)
-                end_dt = datetime.fromtimestamp(raw_data.latest_message_timestamp)
+                start_dt = datetime.fromtimestamp(raw_data.earliest_message_timestamp, tz=DEFAULT_TIMEZONE)
+                end_dt = datetime.fromtimestamp(raw_data.latest_message_timestamp, tz=DEFAULT_TIMEZONE)
                 print(f"Data covers period: {start_dt.strftime('%Y-%m-%d')} to {end_dt.strftime('%Y-%m-%d')}")
             except Exception as e:
                 print(f"Error loading pickle file: {str(e)}")

@@ -2,6 +2,7 @@
 
 import os
 from datetime import datetime
+from chatgpt_data.utils.constants import DEFAULT_TIMEZONE
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union, Any, Iterator
 import csv
@@ -236,7 +237,7 @@ class EnterpriseComplianceAPI:
                         "email": f"user{i}@example.com",
                         "name": f"Test User {i}",
                         "role": "standard-user" if i > 0 else "account-owner",
-                        "created_at": datetime.now().timestamp(),
+                        "created_at": datetime.now(DEFAULT_TIMEZONE).timestamp(),
                         "status": "active"
                     })
                 
@@ -291,7 +292,7 @@ class EnterpriseComplianceAPI:
         
         return users
     
-    def get_conversations(
+    def list_conversations(
         self, 
         since_timestamp: int = 0,
         after: Optional[str] = None,
@@ -299,7 +300,7 @@ class EnterpriseComplianceAPI:
         users: Optional[List[str]] = None,
         file_format: str = "url"
     ) -> Dict[str, Any]:
-        """Get conversations from the workspace.
+        """List conversations from the workspace.
         
         This method fetches conversations from the workspace according to the OpenAPI spec.
         It returns the raw API response, which includes pagination information.
@@ -362,8 +363,8 @@ class EnterpriseComplianceAPI:
                         "workspace_id": self.workspace_id,
                         "user_id": f"user-mock{i % 3}",  # Distribute among 3 mock users
                         "user_email": f"user{i % 3}@example.com",
-                        "created_at": int(datetime.now().timestamp()) - 86400 * (i + 1),  # Created in the past
-                        "last_active_at": int(datetime.now().timestamp()) - 3600 * i,  # Active recently
+                        "created_at": int(datetime.now(DEFAULT_TIMEZONE).timestamp()) - 86400 * (i + 1),  # Created in the past
+                        "last_active_at": int(datetime.now(DEFAULT_TIMEZONE).timestamp()) - 3600 * i,  # Active recently
                         "title": f"Mock Conversation {i}",
                         "messages": {
                             "object": "list",
@@ -371,7 +372,7 @@ class EnterpriseComplianceAPI:
                                 {
                                     "id": f"msg-{conv_id}-1",
                                     "object": "compliance.workspace.message",
-                                    "created_at": int(datetime.now().timestamp()) - 86400 * (i + 1),
+                                    "created_at": int(datetime.now(DEFAULT_TIMEZONE).timestamp()) - 86400 * (i + 1),
                                     "content": {
                                         "content_type": "text",
                                         "parts": [f"This is a mock message in conversation {i}"]
@@ -381,7 +382,7 @@ class EnterpriseComplianceAPI:
                                 {
                                     "id": f"msg-{conv_id}-2",
                                     "object": "compliance.workspace.message",
-                                    "created_at": int(datetime.now().timestamp()) - 86400 * (i + 1) + 60,
+                                    "created_at": int(datetime.now(DEFAULT_TIMEZONE).timestamp()) - 86400 * (i + 1) + 60,
                                     "content": {
                                         "content_type": "text",
                                         "parts": [f"This is a mock response in conversation {i}"]
@@ -452,7 +453,7 @@ class EnterpriseComplianceAPI:
                 print(f"\nFetching conversation page {page_count} (after={after})")
                 
             try:
-                response = self.get_conversations(
+                response = self.list_conversations(
                     since_timestamp=since_timestamp,
                     after=after,
                     users=users,
@@ -627,3 +628,34 @@ class EnterpriseComplianceAPI:
         
         # For other content types or if text extraction fails
         return ""
+        
+    def delete_conversation(self, conversation_id: str) -> None:
+        """Delete a conversation from the workspace.
+        
+        This method deletes a conversation from the workspace according to the OpenAPI spec.
+        It deletes the conversation title, messages, files, and shared links from the workspace.
+        
+        Args:
+            conversation_id: The ID of the conversation to delete
+            
+        Raises:
+            Exception: If the API request fails and mock data is not allowed
+        """
+        try:
+            # Make the API request to delete the conversation
+            endpoint = f"compliance/workspaces/{self.workspace_id}/conversations/{conversation_id}"
+            self._make_request(
+                endpoint=endpoint,
+                method="DELETE"
+            )
+            
+            print(f"Successfully deleted conversation: {conversation_id}")
+            
+        except Exception as e:
+            print(f"API request failed when deleting conversation: {str(e)}")
+            
+            if self.allow_mock_data:
+                print(f"Mock deletion of conversation: {conversation_id}")
+            else:
+                # If mock data is not allowed, raise the exception
+                raise Exception(f"Delete conversation endpoint failed: {str(e)}")
