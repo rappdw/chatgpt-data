@@ -1,8 +1,12 @@
 """ChatGPT Enterprise Compliance API client."""
 
 import os
-from datetime import datetime
-from chatgpt_data.utils.constants import DEFAULT_TIMEZONE
+import sys
+import time
+import json
+import logging
+from datetime import datetime, timedelta
+from chatgpt_data.utils.constants import DEFAULT_TIMEZONE, MESSAGE_TIMESTAMP_TOLERANCE, EARLIEST_EXPECTED_TIMESTAMP
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union, Any, Iterator
 import csv
@@ -10,6 +14,22 @@ import requests
 from dataclasses import dataclass, field
 import pandas as pd
 from urllib.parse import urljoin
+
+
+# Configure logger for API consistency issues
+api_consistency_logger = logging.getLogger('api_consistency_issues')
+api_consistency_logger.setLevel(logging.WARNING)
+
+# Create file handler for the logger
+log_file_handler = logging.FileHandler('api_consistency_issues.log')
+log_file_handler.setLevel(logging.WARNING)
+
+# Create formatter and add it to the handler
+log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+log_file_handler.setFormatter(log_formatter)
+
+# Add the handler to the logger
+api_consistency_logger.addHandler(log_file_handler)
 
 
 @dataclass
@@ -361,6 +381,91 @@ class EnterpriseComplianceAPI:
         
         return users
     
+    def _validate_conversation_timestamps(self, conversations: List[Dict[str, Any]]) -> None:
+        """Validate and correct timestamps in conversation data.
+        
+        This ensures that message timestamps are always within the conversation's
+        created_at and last_active_at boundaries. Any inconsistencies are logged to
+        'api_consistency_issues.log' file.
+        
+        Args:
+            conversations: List of conversation data from the API
+        """
+        for conversation in conversations:
+            conv_id = conversation.get('id', 'unknown')
+            
+            # Skip if missing required timestamp fields
+            if "created_at" not in conversation or "last_active_at" not in conversation:
+                api_consistency_logger.warning(
+                    f"Conversation {conv_id} missing required timestamp fields"
+                )
+                continue
+                
+            conv_created_at = conversation["created_at"]
+            conv_last_active_at = conversation["last_active_at"]
+            
+            # Check if conversation predates the earliest expected timestamp
+            if conv_created_at < EARLIEST_EXPECTED_TIMESTAMP:
+                api_consistency_logger.warning(
+                    f"Conversation {conv_id} has suspiciously early creation timestamp: "
+                    f"{datetime.fromtimestamp(conv_created_at, DEFAULT_TIMEZONE)} "
+                    f"(before {datetime.fromtimestamp(EARLIEST_EXPECTED_TIMESTAMP, DEFAULT_TIMEZONE)})"
+                )
+            
+            # Check if conversation timestamps are invalid
+            if conv_created_at > conv_last_active_at:
+                # Check if the timestamp difference is within the tolerance window
+                time_difference = conv_created_at - conv_last_active_at
+                if time_difference > MESSAGE_TIMESTAMP_TOLERANCE:
+                    api_consistency_logger.warning(
+                        f"Conversation {conv_id} has invalid timestamps: "
+                        f"created_at ({conv_created_at}) > last_active_at ({conv_last_active_at})"
+                    )
+                    continue
+            
+            # Validate message timestamps
+            if "messages" in conversation and "data" in conversation["messages"]:
+                for message in conversation["messages"]["data"]:
+                    msg_id = message.get('id', 'unknown')
+
+                    if "created_at" not in message or message["created_at"] is None:
+                        api_consistency_logger.warning(
+                            f"Conversation {conv_id}, Message {msg_id} missing required timestamp field"
+                        )
+                        continue
+                    
+                    if "created_at" in message and message["created_at"] is not None:
+                        # Check if message predates the earliest expected timestamp
+                        if message["created_at"] < EARLIEST_EXPECTED_TIMESTAMP:
+                            api_consistency_logger.warning(
+                                f"Conversation {conv_id}, Message {msg_id} has suspiciously early timestamp: "
+                                f"{datetime.fromtimestamp(message['created_at'], DEFAULT_TIMEZONE)} "
+                                f"(before {datetime.fromtimestamp(EARLIEST_EXPECTED_TIMESTAMP, DEFAULT_TIMEZONE)})"
+                            )
+                        
+                        # Correct message timestamps that are outside the conversation boundaries
+                        if message["created_at"] < conv_created_at:
+                            # Check if the timestamp is within the tolerance window
+                            time_difference = conv_created_at - message["created_at"]
+                            if time_difference > MESSAGE_TIMESTAMP_TOLERANCE:
+                                api_consistency_logger.warning(
+                                    f"Conversation {conv_id}, Message {msg_id} has timestamp before "
+                                    f"conversation creation: {message['created_at']} < {conv_created_at}. "
+                                    f"Correcting timestamp."
+                                )
+                                message["created_at"] = conv_created_at
+                            
+                        if message["created_at"] > conv_last_active_at:
+                            # Check if the timestamp is within the tolerance window
+                            time_difference = message["created_at"] - conv_last_active_at
+                            if time_difference > MESSAGE_TIMESTAMP_TOLERANCE:
+                                api_consistency_logger.warning(
+                                    f"Conversation {conv_id}, Message {msg_id} has timestamp after "
+                                    f"conversation last activity: {message['created_at']} > {conv_last_active_at}. "
+                                    f"Correcting timestamp."
+                                )
+                                message["created_at"] = conv_last_active_at
+    
     def list_conversations(
         self, 
         since_timestamp: int = 0,
@@ -414,6 +519,10 @@ class EnterpriseComplianceAPI:
                 params=params
             )
             
+            # Validate and correct timestamps in the response
+            if response and "data" in response:
+                self._validate_conversation_timestamps(response["data"])
+            
             return response
             
         except Exception as e:
@@ -424,16 +533,27 @@ class EnterpriseComplianceAPI:
                 
                 # Create mock conversation data
                 mock_conversations = []
+                # Use a single base timestamp for all calculations
+                base_timestamp = int(datetime.now(DEFAULT_TIMEZONE).timestamp())
+                
                 for i in range(5):
                     conv_id = f"conv-mock{i}"
+                    # Calculate conversation timestamps from the single base timestamp
+                    conv_created_at = base_timestamp - 86400 * (i + 1)  # Created in the past
+                    conv_last_active_at = base_timestamp - 3600 * i  # Active recently
+                    
+                    # Ensure message timestamps are within the conversation time range
+                    msg1_created_at = conv_created_at  # First message at conversation creation time
+                    msg2_created_at = min(conv_created_at + 60, conv_last_active_at)  # Response 60 seconds later, but not after last_active_at
+                    
                     mock_conversations.append({
                         "object": "compliance.workspace.conversation",
                         "id": conv_id,
                         "workspace_id": self.workspace_id,
                         "user_id": f"user-mock{i % 3}",  # Distribute among 3 mock users
                         "user_email": f"user{i % 3}@example.com",
-                        "created_at": int(datetime.now(DEFAULT_TIMEZONE).timestamp()) - 86400 * (i + 1),  # Created in the past
-                        "last_active_at": int(datetime.now(DEFAULT_TIMEZONE).timestamp()) - 3600 * i,  # Active recently
+                        "created_at": conv_created_at,
+                        "last_active_at": conv_last_active_at,
                         "title": f"Mock Conversation {i}",
                         "messages": {
                             "object": "list",
@@ -441,7 +561,7 @@ class EnterpriseComplianceAPI:
                                 {
                                     "id": f"msg-{conv_id}-1",
                                     "object": "compliance.workspace.message",
-                                    "created_at": int(datetime.now(DEFAULT_TIMEZONE).timestamp()) - 86400 * (i + 1),
+                                    "created_at": msg1_created_at,
                                     "content": {
                                         "content_type": "text",
                                         "parts": [f"This is a mock message in conversation {i}"]
@@ -451,7 +571,7 @@ class EnterpriseComplianceAPI:
                                 {
                                     "id": f"msg-{conv_id}-2",
                                     "object": "compliance.workspace.message",
-                                    "created_at": int(datetime.now(DEFAULT_TIMEZONE).timestamp()) - 86400 * (i + 1) + 60,
+                                    "created_at": msg2_created_at,
                                     "content": {
                                         "content_type": "text",
                                         "parts": [f"This is a mock response in conversation {i}"]

@@ -39,3 +39,4 @@ Thumbs.db
 
 .env
 rawdata.pfpt*
+api_consistency_issues.log

@@ -102,6 +102,17 @@ def test_list_conversations_with_pagination():
 @patch('chatgpt_data.api.compliance_api.EnterpriseComplianceAPI._make_request')
 def test_list_conversations_real_api(mock_make_request):
     """Test listing conversations with mocked API responses."""
+    # Use a single base timestamp for all calculations
+    base_timestamp = int(datetime.now(DEFAULT_TIMEZONE).timestamp())
+    
+    # Calculate conversation timestamps
+    conv_created_at = base_timestamp - 86400
+    conv_last_active_at = base_timestamp - 3600
+    
+    # Calculate message timestamps within the conversation time range
+    msg1_created_at = conv_created_at  # First message at conversation creation
+    msg2_created_at = min(conv_created_at + 60, conv_last_active_at)  # Response 60 seconds later
+    
     # Mock the API response
     mock_conversation = {
         "object": "compliance.workspace.conversation",
@@ -109,8 +120,8 @@ def test_list_conversations_real_api(mock_make_request):
         "workspace_id": "real-workspace-id",
         "user_id": "real-user-id",
         "user_email": "user@example.com",
-        "created_at": int(datetime.now(DEFAULT_TIMEZONE).timestamp()) - 86400,
-        "last_active_at": int(datetime.now(DEFAULT_TIMEZONE).timestamp()) - 3600,
+        "created_at": conv_created_at,
+        "last_active_at": conv_last_active_at,
         "title": "Test Conversation",
         "messages": {
             "object": "list",
@@ -118,7 +129,7 @@ def test_list_conversations_real_api(mock_make_request):
                 {
                     "id": "msg-1",
                     "object": "compliance.workspace.message",
-                    "created_at": int(datetime.now(DEFAULT_TIMEZONE).timestamp()) - 86400,
+                    "created_at": msg1_created_at,
                     "content": {
                         "content_type": "text",
                         "parts": ["Test message 1"]
@@ -128,7 +139,7 @@ def test_list_conversations_real_api(mock_make_request):
                 {
                     "id": "msg-2",
                     "object": "compliance.workspace.message",
-                    "created_at": int(datetime.now(DEFAULT_TIMEZONE).timestamp()) - 86400 + 60,
+                    "created_at": msg2_created_at,
                     "content": {
                         "content_type": "text",
                         "parts": ["Test response 1"]
@@ -169,6 +180,9 @@ def test_list_conversations_real_api(mock_make_request):
 @patch('chatgpt_data.api.compliance_api.EnterpriseComplianceAPI._make_request')
 def test_list_conversations_multiple_pages(mock_make_request):
     """Test retrieving multiple pages of conversations."""
+    # Use a single base timestamp for all calculations
+    base_timestamp = int(datetime.now(DEFAULT_TIMEZONE).timestamp())
+    
     # Set up mock responses for pagination
     mock_make_request.side_effect = [
         # First page
@@ -177,19 +191,23 @@ def test_list_conversations_multiple_pages(mock_make_request):
             "data": [
                 {
                     "id": "conv-1",
+                    "created_at": base_timestamp - 3700,
+                    "last_active_at": base_timestamp - 3500,
                     "messages": {
                         "data": [
-                            {"id": "msg-1", "role": "user", "created_at": int(datetime.now(DEFAULT_TIMEZONE).timestamp()) - 3600},
-                            {"id": "msg-2", "role": "assistant", "created_at": int(datetime.now(DEFAULT_TIMEZONE).timestamp()) - 3540}
+                            {"id": "msg-1", "role": "user", "created_at": base_timestamp - 3600},
+                            {"id": "msg-2", "role": "assistant", "created_at": base_timestamp - 3540}
                         ]
                     }
                 },
                 {
                     "id": "conv-2",
+                    "created_at": base_timestamp - 3500,
+                    "last_active_at": base_timestamp - 3400,
                     "messages": {
                         "data": [
-                            {"id": "msg-3", "role": "user", "created_at": int(datetime.now(DEFAULT_TIMEZONE).timestamp()) - 3480},
-                            {"id": "msg-4", "role": "assistant", "created_at": int(datetime.now(DEFAULT_TIMEZONE).timestamp()) - 3420}
+                            {"id": "msg-3", "role": "user", "created_at": base_timestamp - 3480},
+                            {"id": "msg-4", "role": "assistant", "created_at": base_timestamp - 3420}
                         ]
                     }
                 }
@@ -203,10 +221,12 @@ def test_list_conversations_multiple_pages(mock_make_request):
             "data": [
                 {
                     "id": "conv-3",
+                    "created_at": base_timestamp - 3400,
+                    "last_active_at": base_timestamp - 3200,
                     "messages": {
                         "data": [
-                            {"id": "msg-5", "role": "user", "created_at": int(datetime.now(DEFAULT_TIMEZONE).timestamp()) - 3360},
-                            {"id": "msg-6", "role": "assistant", "created_at": int(datetime.now(DEFAULT_TIMEZONE).timestamp()) - 3300}
+                            {"id": "msg-5", "role": "user", "created_at": base_timestamp - 3360},
+                            {"id": "msg-6", "role": "assistant", "created_at": base_timestamp - 3300}
                         ]
                     }
                 }
@@ -361,15 +381,25 @@ def test_retry_mechanism_success_after_retry(mock_sleep, mock_request):
     failed_response.json.side_effect = ValueError("No JSON data")
     failed_response.raise_for_status.side_effect = requests.exceptions.HTTPError("500 Server Error", response=failed_response)
     
+    # Use a single base timestamp for all calculations
+    base_timestamp = int(datetime.now(DEFAULT_TIMEZONE).timestamp())
+    
+    # Calculate conversation and message timestamps
+    conv_created_at = base_timestamp - 3700
+    conv_last_active_at = base_timestamp - 3500
+    msg_created_at = base_timestamp - 3600
+    
     # Create a successful response for the second attempt
     success_data = {
         "object": "list",
         "data": [
             {
                 "id": "conv-1",
+                "created_at": conv_created_at,
+                "last_active_at": conv_last_active_at,
                 "messages": {
                     "data": [
-                        {"id": "msg-1", "role": "user", "created_at": int(datetime.now(DEFAULT_TIMEZONE).timestamp()) - 3600}
+                        {"id": "msg-1", "role": "user", "created_at": msg_created_at}
                     ]
                 }
             }
@@ -402,6 +432,53 @@ def test_retry_mechanism_success_after_retry(mock_sleep, mock_request):
     
     # Verify we got the successful response
     assert response == success_data
+
+
+def test_message_timestamps_within_conversation_range():
+    """Test that message timestamps are always within the range of conversation timestamps."""
+    # Create a mock API client with test mode enabled
+    api = EnterpriseComplianceAPI(
+        api_key="test-api-key",
+        org_id="test-org-id",
+        workspace_id="test-workspace", 
+        allow_mock_data=True
+    )
+    
+    # Get conversations
+    response = api.list_conversations()
+    
+    # Verify the response structure
+    assert response is not None
+    assert "data" in response
+    assert len(response["data"]) > 0
+    
+    # Check each conversation and its messages
+    for conversation in response["data"]:
+        # Verify conversation has required timestamp fields
+        assert "created_at" in conversation, "Conversation missing created_at field"
+        assert "last_active_at" in conversation, "Conversation missing last_active_at field"
+        
+        # Get conversation timestamp range
+        conv_created_at = conversation["created_at"]
+        conv_last_active_at = conversation["last_active_at"]
+        
+        # Verify conversation timestamps are valid
+        assert conv_created_at <= conv_last_active_at, f"Conversation {conversation['id']} has created_at after last_active_at"
+        
+        # Check each message in the conversation
+        assert "messages" in conversation
+        assert "data" in conversation["messages"]
+        
+        for message in conversation["messages"]["data"]:
+            # Verify message has a timestamp (if not nullable)
+            if "created_at" in message and message["created_at"] is not None:
+                msg_created_at = message["created_at"]
+                
+                # Verify message timestamp is within conversation range
+                assert conv_created_at <= msg_created_at, \
+                    f"Message {message['id']} has timestamp before conversation creation: {msg_created_at} < {conv_created_at}"
+                assert msg_created_at <= conv_last_active_at, \
+                    f"Message {message['id']} has timestamp after conversation last activity: {msg_created_at} > {conv_last_active_at}"
 
 
 @patch('requests.request')
