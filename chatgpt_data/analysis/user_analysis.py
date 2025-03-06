@@ -423,13 +423,24 @@ class UserAnalysis:
         if self.user_data is None:
             raise ValueError("User data not loaded")
 
-        # Group by period and count active users
+        # Define active users as those who have sent at least one message
+        # This is more reliable than using the is_active flag which might not be consistent
         active_users = (
-            self.user_data[self.user_data["is_active"] == 1]
+            self.user_data[self.user_data["messages"].fillna(0) > 0]
             .groupby(["period_start"])
             .size()
             .reset_index(name="active_users")
         )
+        
+        # If there are no active users based on messages, fall back to is_active flag
+        if len(active_users) == 0 or active_users["active_users"].sum() == 0:
+            print("No users with messages found, falling back to is_active flag")
+            active_users = (
+                self.user_data[self.user_data["is_active"] == 1]
+                .groupby(["period_start"])
+                .size()
+                .reset_index(name="active_users")
+            )
         
         # Convert period_start to datetime with consistent timezone handling
         # First convert to UTC, then localize to our default timezone
@@ -589,42 +600,83 @@ the impact of new GPT features or training initiatives."""
         """
         if self.user_data is None:
             raise ValueError("User data not loaded")
+        
+        # Use raw message data directly instead of going through get_engagement_levels
+        # This gives us more control and avoids potential filtering issues
+        print("\nGenerating message histogram directly from user_data")
+        
+        # Filter to only include rows with valid message data
+        valid_data = self.user_data[pd.notna(self.user_data["messages"])].copy()
+        
+        # Ensure messages column is numeric
+        if not pd.api.types.is_numeric_dtype(valid_data['messages']):
+            print("Converting messages column to numeric")
+            valid_data['messages'] = pd.to_numeric(valid_data['messages'], errors='coerce')
+        
+        # Filter to only include rows with positive message count
+        valid_data = valid_data[valid_data["messages"] > 0]
+        print(f"Found {len(valid_data)} rows with positive message counts")
+        
+        # Check if we have enough data to create a meaningful histogram
+        if len(valid_data) < 2:
+            print("Warning: Not enough data to create a meaningful histogram")
+            # Create a simple figure with a warning message
+            fig, ax = plt.subplots(figsize=(12, 7))
+            ax.text(0.5, 0.5, "Not enough data to create a meaningful histogram.\nNo users with positive message counts found.", 
+                    ha='center', va='center', fontsize=14)
+            ax.set_title("Distribution of Messages per User")
+            ax.axis('off')
             
-        # Get engagement data which already has average messages calculated
-        engagement_df = self.get_engagement_levels()
+            if save:
+                output_path = self.output_dir / "message_histogram.png"
+                plt.savefig(output_path)
+                plt.close(fig)
+                return None
+            
+            return fig
         
         # Filter out extreme values if max_value is specified
         if max_value is not None:
-            plot_data = engagement_df[engagement_df["avg_messages"] <= max_value]
+            plot_data = valid_data[valid_data["messages"] <= max_value]
         else:
-            plot_data = engagement_df
+            plot_data = valid_data
+            
+        print(f"Using {len(plot_data)} data points for histogram")
         
         # Create the histogram
         fig, ax = plt.subplots(figsize=(12, 7))
         
         # Plot histogram with density=False to show counts
-        n, bins_array, patches = ax.hist(
-            plot_data["avg_messages"], 
-            bins=bins, 
-            edgecolor='black', 
-            alpha=0.7
-        )
-        
-        # Add a vertical line for the mean
-        mean_value = plot_data["avg_messages"].mean()
-        median_value = plot_data["avg_messages"].median()
-        ax.axvline(mean_value, color='red', linestyle='dashed', linewidth=1, label=f'Mean: {mean_value:.2f}')
-        ax.axvline(median_value, color='green', linestyle='dashed', linewidth=1, label=f'Median: {median_value:.2f}')
-        
-        # Add labels and title
-        ax.set_title("Distribution of Average Messages per User")
-        ax.set_xlabel("Average Number of Messages")
-        ax.set_ylabel("Number of Users")
-        ax.grid(True, alpha=0.3)
-        ax.legend()
+        try:
+            n, bins_array, patches = ax.hist(
+                plot_data["messages"], 
+                bins=min(bins, len(plot_data)), # Ensure bins don't exceed data points
+                edgecolor='black', 
+                alpha=0.7
+            )
+            
+            # Add a vertical line for the mean and median
+            mean_value = plot_data["messages"].mean()
+            median_value = plot_data["messages"].median()
+            ax.axvline(mean_value, color='red', linestyle='dashed', linewidth=1, label=f'Mean: {mean_value:.2f}')
+            ax.axvline(median_value, color='green', linestyle='dashed', linewidth=1, label=f'Median: {median_value:.2f}')
+            
+            # Add labels and title
+            ax.set_title("Distribution of Messages per User")
+            ax.set_xlabel("Number of Messages")
+            ax.set_ylabel("Number of Users")
+            ax.grid(True, alpha=0.3)
+            ax.legend()
+        except Exception as e:
+            print(f"Error creating histogram: {e}")
+            # Create a simple error message
+            ax.text(0.5, 0.5, f"Error creating histogram: {e}", 
+                    ha='center', va='center', fontsize=12, wrap=True)
+            ax.set_title("Distribution of Messages per User - Error")
+            ax.axis('off')
         
         # Add comment box with explanation
-        total_users = len(engagement_df)
+        total_users = len(valid_data)
         filtered_users = len(plot_data)
         filtered_text = ""
         if max_value is not None and filtered_users < total_users:
@@ -648,12 +700,129 @@ This helps identify patterns in user engagement and message frequency.{filtered_
         
         return fig
 
+    def generate_message_histogram_log(self, bins: int = 20, max_value: Optional[int] = None, save: bool = True) -> Optional[plt.Figure]:
+        """Generate a histogram of messages sent by users with a logarithmic y-axis scale.
+        
+        Args:
+            bins: Number of bins for the histogram
+            max_value: Maximum value to include in the histogram (None for no limit)
+            save: Whether to save the figure to the output directory
+            
+        Returns:
+            The matplotlib figure if save is False, otherwise None
+        """
+        if self.user_data is None:
+            raise ValueError("User data not loaded")
+        
+        # Use raw message data directly
+        print("\nGenerating log-scale message histogram directly from user_data")
+        
+        # Filter to only include rows with valid message data
+        valid_data = self.user_data[pd.notna(self.user_data["messages"])].copy()
+        
+        # Ensure messages column is numeric
+        if not pd.api.types.is_numeric_dtype(valid_data['messages']):
+            print("Converting messages column to numeric")
+            valid_data['messages'] = pd.to_numeric(valid_data['messages'], errors='coerce')
+        
+        # Filter to only include rows with positive message count
+        valid_data = valid_data[valid_data["messages"] > 0]
+        print(f"Found {len(valid_data)} rows with positive message counts")
+        
+        # Check if we have enough data to create a meaningful histogram
+        if len(valid_data) < 2:
+            print("Warning: Not enough data to create a meaningful histogram")
+            # Create a simple figure with a warning message
+            fig, ax = plt.subplots(figsize=(12, 7))
+            ax.text(0.5, 0.5, "Not enough data to create a meaningful histogram.\nNo users with positive message counts found.", 
+                    ha='center', va='center', fontsize=14)
+            ax.set_title("Distribution of Messages per User (Log Scale)")
+            ax.axis('off')
+            
+            if save:
+                output_path = self.output_dir / "message_histogram_log.png"
+                plt.savefig(output_path)
+                plt.close(fig)
+                return None
+            
+            return fig
+        
+        # Filter out extreme values if max_value is specified
+        if max_value is not None:
+            plot_data = valid_data[valid_data["messages"] <= max_value]
+        else:
+            plot_data = valid_data
+            
+        print(f"Using {len(plot_data)} data points for log-scale histogram")
+        
+        # Create the histogram
+        fig, ax = plt.subplots(figsize=(12, 7))
+        
+        try:
+            # Plot histogram with density=False to show counts
+            n, bins_array, patches = ax.hist(
+                plot_data["messages"], 
+                bins=min(bins, len(plot_data)), # Ensure bins don't exceed data points
+                edgecolor='black', 
+                alpha=0.7
+            )
+            
+            # Set y-axis to log scale
+            ax.set_yscale('log')
+            
+            # Add a vertical line for the mean and median
+            mean_value = plot_data["messages"].mean()
+            median_value = plot_data["messages"].median()
+            ax.axvline(mean_value, color='red', linestyle='dashed', linewidth=1, label=f'Mean: {mean_value:.2f}')
+            ax.axvline(median_value, color='green', linestyle='dashed', linewidth=1, label=f'Median: {median_value:.2f}')
+            
+            # Add labels and title
+            ax.set_title("Distribution of Messages per User (Log Scale)")
+            ax.set_xlabel("Number of Messages")
+            ax.set_ylabel("Number of Users (Log Scale)")
+            ax.grid(True, alpha=0.3)
+            ax.legend()
+            
+            # Add comment box with explanation
+            total_users = len(valid_data)
+            filtered_users = len(plot_data)
+            filtered_text = ""
+            if max_value is not None and filtered_users < total_users:
+                filtered_text = f"\nNote: {total_users - filtered_users} users with >{max_value} messages are not shown."
+                
+            comment = f"""This histogram shows the distribution of messages sent by users with a logarithmic y-axis scale.
+    The x-axis represents the number of messages per user.
+    The y-axis (log scale) shows how many users fall into each message count range.
+    Log scale helps visualize the distribution when there are large differences in frequency counts.{filtered_text}"""
+            props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+            ax.text(0.05, 0.95, comment, transform=ax.transAxes, fontsize=9,
+                    verticalalignment='top', bbox=props)
+            
+        except Exception as e:
+            print(f"Error creating log-scale histogram: {e}")
+            # Create a simple error message
+            ax.text(0.5, 0.5, f"Error creating log-scale histogram: {e}", 
+                    ha='center', va='center', fontsize=12, wrap=True)
+            ax.set_title("Distribution of Messages per User (Log Scale) - Error")
+            ax.axis('off')
+        
+        plt.tight_layout()
+        
+        if save:
+            output_path = self.output_dir / "message_histogram_log.png"
+            plt.savefig(output_path)
+            plt.close(fig)
+            return None
+        
+        return fig
+
     def generate_all_trends(self) -> None:
         """Generate all trend graphs and save them to the output directory."""
         self.generate_active_users_trend()
         self.generate_message_volume_trend()
         self.generate_gpt_usage_trend()
         self.generate_message_histogram()
+        self.generate_message_histogram_log()
 
     def get_engagement_levels(self, high_threshold: int = 20, low_threshold: int = 5) -> pd.DataFrame:
         """Categorize users by engagement level based on average message count across all periods.
@@ -668,20 +837,85 @@ This helps identify patterns in user engagement and message frequency.{filtered_
         if self.user_data is None:
             raise ValueError("User data not loaded")
             
-        # Filter to only include rows with valid message data
-        valid_data = self.user_data[pd.notna(self.user_data["messages"])].copy()
+        # Print data quality information for debugging
+        print("\nMessage Data Quality Check:")
+        print(f"Total rows in user_data: {len(self.user_data)}")
+        print(f"Rows with null 'messages': {self.user_data['messages'].isna().sum()}")
+        
+        # Check if 'messages' column is numeric and convert if needed
+        if not pd.api.types.is_numeric_dtype(self.user_data['messages']):
+            print(f"Warning: 'messages' column is not numeric, attempting to convert")
+            try:
+                self.user_data['messages'] = pd.to_numeric(self.user_data['messages'], errors='coerce')
+            except Exception as e:
+                print(f"Error converting 'messages' to numeric: {e}")
+                # Print sample values to help diagnose the issue
+                print(f"Sample 'messages' values: {self.user_data['messages'].head().tolist()}")
+        
+        # Continue with debugging info
+        print(f"Rows with zero 'messages': {len(self.user_data[self.user_data['messages'] == 0])}")
+        print(f"Rows with positive 'messages': {len(self.user_data[self.user_data['messages'] > 0])}")
+        
+        # Filter to include rows with valid message data AND positive message count
+        # This ensures we only consider users who have actually sent messages
+        valid_data = self.user_data[
+            (pd.notna(self.user_data["messages"])) & 
+            (self.user_data["messages"] > 0)
+        ].copy()
+        
+        print(f"Rows after filtering: {len(valid_data)}")
         
         # Calculate average messages per user across all periods
-        engagement_df = (
-            valid_data
-            .groupby(["account_id", "public_id", "name", "email"])
-            .agg({
-                "messages": "mean",
-                "period_start": "min",
-                "period_end": "max"
+        # If we don't have enough data after filtering, use all data with messages >= 0
+        if len(valid_data) < 2:
+            print("Warning: Not enough data after filtering for positive messages. Using all valid message data.")
+            valid_data = self.user_data[pd.notna(self.user_data["messages"])].copy()
+            print(f"Rows after relaxed filtering: {len(valid_data)}")
+            
+        # Group by user identifiers and calculate statistics
+        try:
+            # First try with all identifiers
+            engagement_df = (
+                valid_data
+                .groupby(["account_id", "public_id", "name", "email"])
+                .agg({
+                    "messages": "mean",
+                    "period_start": "min",
+                    "period_end": "max"
+                })
+                .reset_index()
+            )
+            
+            # If we don't have enough data, try with just public_id
+            if len(engagement_df) < 2:
+                print("Warning: Not enough data after grouping. Trying with just public_id.")
+                engagement_df = (
+                    valid_data
+                    .groupby(["public_id"])
+                    .agg({
+                        "messages": "mean",
+                        "period_start": "min",
+                        "period_end": "max",
+                        "name": "first",
+                        "email": "first",
+                        "account_id": "first"
+                    })
+                    .reset_index()
+                )
+                
+            print(f"Final engagement_df rows: {len(engagement_df)}")
+        except Exception as e:
+            print(f"Error in groupby operation: {e}")
+            # Create a minimal DataFrame with just the message data
+            engagement_df = pd.DataFrame({
+                "public_id": valid_data["public_id"],
+                "name": valid_data["name"],
+                "email": valid_data["email"],
+                "account_id": valid_data["account_id"],
+                "avg_messages": valid_data["messages"],
+                "first_period": valid_data["period_start"],
+                "last_period": valid_data["period_end"]
             })
-            .reset_index()
-        )
         
         # Rename columns for clarity
         engagement_df = engagement_df.rename(columns={

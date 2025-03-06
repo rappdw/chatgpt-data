@@ -89,19 +89,19 @@ def determine_cadence(start_date: datetime, end_date: datetime) -> str:
     
     # Determine cadence based on the time span
     if time_diff < 2:
-        return "daily"
+        return "Daily"
     elif time_diff <= 7:
-        return "weekly"
+        return "Weekly"
     elif time_diff <= 14:
-        return "bi-weekly"
+        return "Bi-weekly"
     elif time_diff <= 31:
-        return "monthly"
+        return "Monthly"
     elif time_diff <= 92:
-        return "quarterly"
+        return "Quarterly"
     elif time_diff <= 183:
-        return "semi-annual"
+        return "Semi-annual"
     else:
-        return "annual"
+        return "Annual"
 
 
 def map_user_status(status: str) -> str:
@@ -395,11 +395,11 @@ def save_engagement_metrics_to_csv(metrics: EngagementMetrics, output_dir: str, 
             "department": "",  # Empty string as requested
             "user_status": mapped_status,
             "created_or_invited_date": created_at_str,
-            "is_active": 1,  # User has messages in the period
+            "is_active": 1 if activity.user_message_count > 0 else 0,  # Only active if user has sent messages
             "first_day_active_in_period": first_active_str,
             "last_day_active_in_period": last_active_str,
             "messages": activity.user_message_count,
-            "message_rank": 0,
+            "messages_rank": 0,
             "gpt_messages": activity.gpt_message_count,
             "gpts_messaged": len(activity.gpt_set),
             "tool_messages": activity.tool_message_count,
