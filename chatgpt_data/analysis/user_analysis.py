@@ -958,8 +958,8 @@ This helps identify patterns in user engagement and message frequency.{filtered_
         latest_period = self.user_data["period_end"].max()
         latest_data = self.user_data[self.user_data["period_end"] == latest_period]
         
-        # Filter out users with pending status
-        active_users = latest_data[latest_data["user_status"] != "pending"]
+        # Filter on users with active status
+        active_users = latest_data[latest_data["user_status"] == "active"]
         active_user_ids = set(active_users["public_id"].unique())
         
         # Create a mapping of public_id to latest user_status for later use
@@ -1309,8 +1309,8 @@ This helps identify patterns in user engagement and message frequency.{filtered_
             # Add the latest user_status to each user in the output DataFrame
             output_df["user_status"] = output_df["public_id"].map(latest_user_status)
             
-            # Fill any missing user_status values with 'enabled' as a default
-            output_df["user_status"] = output_df["user_status"].fillna("enabled")
+            # Fill any missing user_status values with 'inactive' as a default
+            output_df["user_status"] = output_df["user_status"].fillna("inactive")
             
             # Select only the columns we want to include in the report
             base_columns = [
@@ -1454,9 +1454,8 @@ This helps identify patterns in user engagement and message frequency.{filtered_
             
             # Define custom sort order for user_status
             status_order = {
-                'enabled': 0,
-                'pending': 1,
-                'deleted': 2
+                'active': 0,
+                'inactive': 1
             }
             
             # Create a helper column for sorting by status

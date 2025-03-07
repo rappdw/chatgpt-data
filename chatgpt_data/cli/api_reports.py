@@ -104,26 +104,6 @@ def determine_cadence(start_date: datetime, end_date: datetime) -> str:
         return "Annual"
 
 
-def map_user_status(status: str) -> str:
-    """Map API status values to the expected values.
-    
-    Args:
-        status: Status value from the API
-        
-    Returns:
-        Mapped status value (enabled, pending, deleted)
-    """
-    status_mapping = {
-        "active": "enabled",
-        "enabled": "enabled",
-        "pending": "pending",
-        "deleted": "deleted",
-        "disabled": "deleted",
-        "suspended": "deleted",
-    }
-    
-    return status_mapping.get(status.lower(), "enabled")  # Default to enabled if unknown
-
 @dataclass
 class RawData:
     users: Dict[str, User]
@@ -420,9 +400,6 @@ def save_user_engagement_metrics_to_csv(metrics: EngagementMetrics, output_dir: 
         # Get organization ID (account_id)
         account_id = ""
         
-        # Map user status to expected values
-        mapped_status = map_user_status(user.status)
-        
         row = {
             "cadence": cadence,
             "period_start": period_start_str,
@@ -434,7 +411,7 @@ def save_user_engagement_metrics_to_csv(metrics: EngagementMetrics, output_dir: 
             "role": "",
             "user_role": user.role,
             "department": "",  # Empty string as requested
-            "user_status": mapped_status,
+            "user_status": user.status,
             "created_or_invited_date": created_at_str,
             "is_active": 1 if activity.user_message_count > 0 else 0,  # Only active if user has sent messages
             "first_day_active_in_period": first_active_str,
