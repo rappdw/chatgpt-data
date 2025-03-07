@@ -820,7 +820,7 @@ This helps identify patterns in user engagement and message frequency.{filtered_
         """Generate all trend graphs and save them to the output directory."""
         self.generate_active_users_trend()
         self.generate_message_volume_trend()
-        self.generate_gpt_usage_trend()
+        # Removed generate_gpt_usage_trend() to avoid duplicate with GPTAnalysis.generate_gpt_messages_trend()
         self.generate_message_histogram()
         self.generate_message_histogram_log()
 

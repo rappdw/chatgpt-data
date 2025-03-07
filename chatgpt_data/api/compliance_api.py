@@ -20,16 +20,13 @@ from urllib.parse import urljoin
 api_consistency_logger = logging.getLogger('api_consistency_issues')
 api_consistency_logger.setLevel(logging.WARNING)
 
-# Create file handler for the logger
-log_file_handler = logging.FileHandler('api_consistency_issues.log')
-log_file_handler.setLevel(logging.WARNING)
-
-# Create formatter and add it to the handler
-log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-log_file_handler.setFormatter(log_formatter)
-
-# Add the handler to the logger
-api_consistency_logger.addHandler(log_file_handler)
+# Create a file handler if not already added
+if not api_consistency_logger.handlers:
+    file_handler = logging.FileHandler('api_consistency_issues.log')
+    file_handler.setLevel(logging.WARNING)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+    api_consistency_logger.addHandler(file_handler)
 
 
 @dataclass
@@ -42,6 +39,29 @@ class User:
     created_at: float
     status: str
     conversations: List[str] = field(default_factory=list)
+
+@dataclass
+class GPT:
+    """Represents a GPT model in the ChatGPT Enterprise system."""
+    id: str
+    name: str
+    description: str
+    created_at: float
+    creator_id: str
+    creator_email: str
+
+@dataclass
+class Project:
+    """Represents a project in the ChatGPT Enterprise system."""
+    id: str
+    name: str
+    description: str
+    created_at: float
+    creator_id: str
+    creator_email: str
+
+
+
 
 
 class EnterpriseComplianceAPI:
@@ -138,24 +158,24 @@ class EnterpriseComplianceAPI:
                 timeout=timeout
             )
             
-            # Special handling for 404 errors related to GPTs and projects
+            # Check for 404 errors on GPT and Project endpoints
             if response.status_code == 404:
-                # Check if this is a GPT or project not found error
+                # Check if this is a GPT or project endpoint
                 if '/gpts/' in endpoint or '/projects/' in endpoint:
-                    error_content = response.json()
                     resource_type = "GPT" if '/gpts/' in endpoint else "Project"
-                    resource_id = endpoint.split('/')[-2]  # Extract ID from the endpoint
-                    print(f"{resource_type} not found in workspace: {resource_id}")
-                    raise requests.exceptions.HTTPError(f"{resource_type} not found", response=response)
+                    resource_id = endpoint.split('/')[-1].split('?')[0]  # Extract ID from the endpoint
+                    # Log the missing resource instead of raising an exception
+                    api_consistency_logger.warning(f"Missing {resource_type}: {resource_id} not found in workspace {self.workspace_id}")
+                    # Return a standardized response for missing resources
+                    return {"detail": f"{resource_type} not found"}
             
-            response.raise_for_status()  # Raise an exception for 4XX/5XX status codes
+            # Raise an exception for other 4XX/5XX status codes
+            response.raise_for_status()
             
             return response.json()
         except requests.exceptions.HTTPError as e:
             # Handle HTTP errors (4xx, 5xx)
-            # If it's already a simplified 404 error for GPTs/projects, just raise it
-            if str(e).startswith(("GPT not found", "Project not found")):
-                raise
+            # We no longer need to handle simplified 404 errors here since we catch them earlier
                 
             # Handle 400 Bad Request errors for invalid IDs
             if e.response.status_code == 400:
@@ -706,7 +726,7 @@ class EnterpriseComplianceAPI:
             
         return processed_count
     
-    def get_gpt_name(self, gpt_id: str) -> str:
+    def get_gpt(self, gpt_id: str) -> GPT:
         """Get the builder name of a GPT by its ID.
         
         Args:
@@ -717,42 +737,71 @@ class EnterpriseComplianceAPI:
         """
         try:
             # Make the API request to get GPT configurations
-            endpoint = f"compliance/workspaces/{self.workspace_id}/gpts/{gpt_id}/configs"
+            endpoint = f"compliance/workspaces/{self.workspace_id}/gpts/{gpt_id}"
             response = self._make_request(
                 endpoint=endpoint,
-                method="GET",
-                params={"limit": 1}  # We only need the most recent config
+                method="GET"
             )
             
-            # Get the first (most recent) configuration if available
-            configs = response.get("data", [])
-            if configs and len(configs) > 0:
-                # Return the name from the first configuration
-                return configs[0].get("name", gpt_id)
-            else:
-                # If no configurations found, return "External or Deleted"
-                return "External or Deleted"
+            # Safely get the config data with proper error handling
+            config_data = response.get("latest_config", {}).get("data", [])
             
+            # Check if config_data is a non-empty list before accessing index 0
+            if config_data and len(config_data) > 0:
+                config = config_data[0]
+            else:
+                # Log the issue and use a default config
+                api_consistency_logger.warning(f"Missing config data for GPT: {gpt_id} in workspace {self.workspace_id}")
+                config = {}
+                
+            gpt = GPT(
+                id=gpt_id,
+                name=config.get("name", gpt_id),
+                description=config.get("description", ""),
+                created_at=response.get("created_at", 0),
+                creator_id=response.get("owner_id", ""),
+                creator_email=response.get("owner_email", ""),
+            )
+        
+            return gpt            
+
         except requests.exceptions.HTTPError as e:
-            # If this is our simplified 404 error or a 400 with 'Invalid gpt_id', return "External or Deleted"
+            gpt = GPT(
+                id=gpt_id,
+                name="External or Deleted",
+                description="",
+                created_at=0,
+                creator_id="",
+                creator_email="",
+            )
+            # If this is our simplified 404 error or a 400 with 'Invalid gpt_id', log and return default GPT
             if str(e).startswith("GPT not found") or (
                 e.response.status_code == 400 and 
                 "Invalid gpt_id" in e.response.text
             ):
-                return "External or Deleted"
+                # Log the missing GPT to the consistency issues log
+                api_consistency_logger.warning(f"Missing GPT: {gpt_id} not found in workspace {self.workspace_id}")
+                return gpt
             
             # For other errors, log and handle as before
             error_msg = str(e)
-            print(f"API request failed when fetching GPT details: {error_msg}")
+            api_consistency_logger.error(f"API request failed when fetching GPT details for {gpt_id}: {error_msg}")
             
             if self.allow_mock_data:
-                print(f"Using mock GPT name for {gpt_id}")
-                return f"Mock GPT {gpt_id}"
+                api_consistency_logger.info(f"Using mock GPT data for {gpt_id}")
+                return GPT(
+                    id=gpt_id,
+                    name=f"Mock GPT {gpt_id}",
+                    description="",
+                    created_at=0,
+                    creator_id="",
+                    creator_email="",
+                )
             else:
                 # If mock data is not allowed, return "External or Deleted"
-                return "External or Deleted"
+                return gpt
     
-    def get_project_name(self, project_id: str) -> str:
+    def get_project(self, project_id: str) -> Project:
         """Get the builder name of a project by its ID.
         
         Args:
@@ -763,40 +812,70 @@ class EnterpriseComplianceAPI:
         """
         try:
             # Make the API request to get project configurations
-            endpoint = f"compliance/workspaces/{self.workspace_id}/projects/{project_id}/configs"
+            endpoint = f"compliance/workspaces/{self.workspace_id}/projects/{project_id}"
             response = self._make_request(
                 endpoint=endpoint,
                 method="GET",
-                params={"limit": 1}  # We only need the most recent config
             )
+
+            # Safely get the config data with proper error handling
+            config_data = response.get("latest_config", {}).get("data", [])
             
-            # Get the first (most recent) configuration if available
-            configs = response.get("data", [])
-            if configs and len(configs) > 0:
-                # Return the name from the first configuration
-                return configs[0].get("name", project_id)
+            # Check if config_data is a non-empty list before accessing index 0
+            if config_data and len(config_data) > 0:
+                config = config_data[0]
             else:
-                # If no configurations found, return "External or Deleted"
-                return "External or Deleted"
+                # Log the issue and use a default config
+                api_consistency_logger.warning(f"Missing config data for Project: {project_id} in workspace {self.workspace_id}")
+                config = {}
+                
+            project = Project(
+                id=project_id,
+                name=config.get("name", project_id),
+                description=config.get("description", ""),
+                created_at=response.get("created_at", 0),
+                creator_id=response.get("owner_id", ""),
+                creator_email=response.get("owner_email", ""),
+            )
+
+            return project
             
         except requests.exceptions.HTTPError as e:
-            # If this is our simplified 404 error or a 400 with 'Invalid project_id', return "External or Deleted"
+            project = Project(
+                id=project_id,
+                name="External or Deleted",
+                description="",
+                created_at=0,
+                creator_id="",
+                creator_email="",
+            )
+            
+            # If this is our simplified 404 error or a 400 with 'Invalid project_id', log and return default project
             if str(e).startswith("Project not found") or (
                 e.response.status_code == 400 and 
                 "Invalid project_id" in e.response.text
             ):
-                return "External or Deleted"
+                # Log the missing project to the consistency issues log
+                api_consistency_logger.warning(f"Missing Project: {project_id} not found in workspace {self.workspace_id}")
+                return project
             
             # For other errors, log and handle as before
             error_msg = str(e)
-            print(f"API request failed when fetching project details: {error_msg}")
+            api_consistency_logger.error(f"API request failed when fetching project details for {project_id}: {error_msg}")
             
             if self.allow_mock_data:
-                print(f"Using mock project name for {project_id}")
-                return f"Mock Project {project_id}"
+                api_consistency_logger.info(f"Using mock project data for {project_id}")
+                return Project(
+                    id=project_id,
+                    name=f"Mock Project {project_id}",
+                    description="",
+                    created_at=0,
+                    creator_id="",
+                    creator_email="",
+                )
             else:
                 # If mock data is not allowed, return "External or Deleted"
-                return "External or Deleted"
+                return project
 
     def _extract_message_text(self, message: Dict[str, Any]) -> str:
         """Extract text content from a message.

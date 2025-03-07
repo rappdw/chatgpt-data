@@ -15,7 +15,7 @@ import json
 from pathlib import Path
         
 
-from chatgpt_data.api.compliance_api import EnterpriseComplianceAPI, User
+from chatgpt_data.api.compliance_api import EnterpriseComplianceAPI, User, GPT, Project
 from chatgpt_data.cli.all_trends import main as run_all_trends
 from chatgpt_data.utils.constants import DEFAULT_TIMEZONE
 from dotenv import load_dotenv
@@ -129,6 +129,8 @@ class RawData:
     users: Dict[str, User]
     earliest_message_timestamp: int
     latest_message_timestamp: int
+    project_map: Dict[str, Project]
+    gpt_map: Dict[str, GPT]
 
 @dataclass
 class UserMetrics:
@@ -147,16 +149,27 @@ class UserMetrics:
     last_day_active: int = 0
 
 @dataclass
+class GPTMetrics:
+    conversation_count: int = 0
+    message_count: int = 0
+    user_set: Set[str] = field(default_factory=set)
+    gpt_set: Set[str] = field(default_factory=set)
+    first_day_active: Optional[int] = None
+    last_day_active: Optional[int] = None
+
+@dataclass
 class EngagementMetrics:
     users: Dict[str, User]
     user_activity: Dict[str, UserMetrics] = field(default_factory=dict)
+    gpts: Dict[str, GPT] = field(default_factory=dict)
+    gpt_activity: Dict[str, GPTMetrics] = field(default_factory=dict)
 
 @dataclass
 class Message:
     id: str
     created_at: int
-    gpt_name: Optional[str] = None
-    project_name: Optional[str] = None
+    gpt_id: Optional[str] = None
+    project_id: Optional[str] = None
     role: Literal["user", "system", "assistant", "tool"] = "user"
     tool_name: Optional[str] = None
 
@@ -168,10 +181,19 @@ class Conversation:
     title: str
     messages: List[Message] = field(default_factory=list)
 
-def get_engagement_metrics(raw_data: RawData) -> EngagementMetrics:
-    """Get engagement metrics for a set of users and conversations."""
-    # Convert datetime to Unix timestamp (seconds since epoch)
-    engagement_metrics = EngagementMetrics(users=raw_data.users)
+def get_engagement_metrics(raw_data: RawData, engagement_metrics: Optional[EngagementMetrics] = None) -> EngagementMetrics:
+    """Get engagement metrics for a set of users and conversations.
+    
+    Args:
+        raw_data: Raw data containing users, conversations, and messages
+        engagement_metrics: Optional existing EngagementMetrics object to populate
+        
+    Returns:
+        Populated EngagementMetrics object
+    """
+    # Create new EngagementMetrics if none provided
+    if engagement_metrics is None:
+        engagement_metrics = EngagementMetrics(users=raw_data.users)
 
     total_conversation_count = 0
     total_message_count = 0
@@ -214,16 +236,29 @@ def get_engagement_metrics(raw_data: RawData) -> EngagementMetrics:
                 if message.tool_name and message.role != "tool":
                     print(f"WARNING: Message with role {message.role} has tool name {message.tool_name}")
                     user_metrics.tool_set.add(message.tool_name)
-                if message.gpt_name:
+                if message.gpt_id:
                     # if role != "user":
                     #     print(f" Non-user gpt message. role, '{role}'\nmsg: {msg}\n\n")
                     user_metrics.gpt_message_count += 1
-                    user_metrics.gpt_set.add(message.gpt_name)
-                if message.project_name:
+                    user_metrics.gpt_set.add(message.gpt_id)
+                    gpt_metrics = engagement_metrics.gpt_activity.get(message.gpt_id, GPTMetrics())
+                    gpt_metrics.message_count += 1
+                    gpt_metrics.user_set.add(user_id)
+                    
+                    # Update first and last active day for the GPT
+                    message_day = int(message.created_at / 86400) * 86400
+                    if gpt_metrics.first_day_active is None or message_day < gpt_metrics.first_day_active:
+                        gpt_metrics.first_day_active = message_day
+                    if gpt_metrics.last_day_active is None or message_day > gpt_metrics.last_day_active:
+                        gpt_metrics.last_day_active = message_day
+                        
+                    # Store the updated metrics
+                    engagement_metrics.gpt_activity[message.gpt_id] = gpt_metrics
+                if message.project_id:
                     # if role != "user":
                     #     print(f" Non-user project message. role, '{role}'\nmsg: {msg}\n\n")
                     user_metrics.project_message_count += 1
-                    user_metrics.project_set.add(message.project_name)
+                    user_metrics.project_set.add(message.project_id)
 
 
             if conversation_in_range:
@@ -253,15 +288,15 @@ def get_users_conversations(api: EnterpriseComplianceAPI, debug_logging: bool = 
     users_dict = api.get_all_users()
     conversation_count = 0
     message_count = 0
-    project_id_to_name = dict()
-    gpt_id_to_name = dict()
+    project_map = dict()
+    gpt_map = dict()
     # get the unix timestamp of current time
     earliest_message_timestamp = datetime.now(DEFAULT_TIMEZONE).timestamp()
     most_recent_message_timestamp = 0
 
     # Process all conversations with a callback function
     def process_conversation(conversation):
-        nonlocal users_dict, conversation_count, message_count, project_id_to_name, gpt_id_to_name, earliest_message_timestamp, most_recent_message_timestamp
+        nonlocal users_dict, conversation_count, message_count, project_map, gpt_map, earliest_message_timestamp, most_recent_message_timestamp
         conversation_id = conversation.get("id", "unknown")
         user_id = conversation.get("user_id")
         last_active = conversation.get("last_active_at")
@@ -289,10 +324,10 @@ def get_users_conversations(api: EnterpriseComplianceAPI, debug_logging: bool = 
         for msg in messages:
             gpt_id = msg.get("gpt_id")
             project_id = msg.get("project_id")
-            if gpt_id and not gpt_id in gpt_id_to_name:
-                gpt_id_to_name[gpt_id] = api.get_gpt_name(gpt_id)
-            if project_id and not project_id in project_id_to_name:
-                project_id_to_name[project_id] = api.get_project_name(project_id)
+            if gpt_id and not gpt_id in gpt_map:
+                gpt_map[gpt_id] = api.get_gpt(gpt_id)
+            if project_id and not project_id in project_map:
+                project_map[project_id] = api.get_project(project_id)
             msg_timestamp = msg.get("created_at")
             if msg_timestamp is not None:
                 if msg_timestamp < earliest_message_timestamp:
@@ -302,8 +337,8 @@ def get_users_conversations(api: EnterpriseComplianceAPI, debug_logging: bool = 
             message_data = Message(
                 id=msg.get("id", "unknown"),
                 created_at=msg_timestamp,
-                gpt_name=gpt_id_to_name.get(gpt_id),
-                project_name=project_id_to_name.get(project_id),
+                gpt_id=gpt_id,
+                project_id=project_id,
                 role=msg.get("author", {}).get("role"),
                 tool_name=msg.get("author", {}).get("tool_name"),
             )
@@ -323,12 +358,18 @@ def get_users_conversations(api: EnterpriseComplianceAPI, debug_logging: bool = 
     
     return RawData(
         users=users_dict,
+        project_map=project_map,
+        gpt_map=gpt_map,
         earliest_message_timestamp=earliest_message_timestamp,
         latest_message_timestamp=most_recent_message_timestamp
     )
 
-
 def save_engagement_metrics_to_csv(metrics: EngagementMetrics, output_dir: str, end_date: datetime, start_date: datetime) -> None:
+    save_user_engagement_metrics_to_csv(metrics, output_dir, end_date, start_date)
+    save_gpt_engagement_metrics_to_csv(metrics, output_dir, end_date, start_date)
+
+
+def save_user_engagement_metrics_to_csv(metrics: EngagementMetrics, output_dir: str, end_date: datetime, start_date: datetime) -> None:
     """Save user engagement metrics to a CSV file.
     
     Args:
@@ -434,15 +475,107 @@ def save_engagement_metrics_to_csv(metrics: EngagementMetrics, output_dir: str, 
         print(f"Saved engagement metrics for {len(active_rows)} users to {output_file}")
     else:
         print("No user engagement data to save")
+
+def save_gpt_engagement_metrics_to_csv(metrics: EngagementMetrics, output_dir: str, end_date: datetime, start_date: datetime) -> None:
+    """Save gpt engagement metrics to a CSV file.
     
+    Args:
+        metrics: EngagementMetrics object with gpt activity data
+        output_dir: Directory to save output files
+        end_date: Optional end date of the reporting period. If provided, users created after this date
+                 will be excluded from the non-engaged users report.
+        start_date: Optional start date of the reporting period. Used for determining cadence.
+        
+    This function creates two CSV files:
+    1. The main engagement metrics file with the name provided in output_file
+    2. A non-engagement file for users who had no activity during the reporting period
+       with the name pattern: non_engagement_YYYYMMDD_YYYYMMDD.csv
+    """
+    date_range_str = f"{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}"
+    # Format period start and end dates
+    period_start_str = start_date.strftime("%Y-%m-%d")
+    period_end_str = end_date.strftime("%Y-%m-%d")
+    
+    # Create rows for active users
+    active_rows = []
+    
+    # Convert gpt activity data to rows
+    for gpt_id, activity in metrics.gpt_activity.items():
+        # Get gpt info - handle the case when gpt might be None
+        gpt = metrics.gpts.get(gpt_id)
+        
+        # Create display name (use name if available, otherwise email)
+        display_name = gpt.name
+        
+        # Get last active timestamp
+        last_active_timestamp = activity.last_day_active
+        last_active_str = datetime.fromtimestamp(last_active_timestamp, tz=DEFAULT_TIMEZONE).strftime("%Y-%m-%d") if last_active_timestamp else ""
+        
+        # Get first active timestamp
+        first_active_timestamp = activity.first_day_active
+        first_active_str = datetime.fromtimestamp(first_active_timestamp, tz=DEFAULT_TIMEZONE).strftime("%Y-%m-%d") if first_active_timestamp else ""
+        
+        # Get created_at timestamp
+        created_at = gpt.created_at
+        created_at_str = datetime.fromtimestamp(created_at, tz=DEFAULT_TIMEZONE).strftime("%Y-%m-%d") if created_at else ""
+        
+        # Determine cadence based on start_date and end_date
+        cadence = determine_cadence(start_date, end_date) if start_date and end_date else "unknown"
+        
+        # Get organization ID (account_id)
+        account_id = ""
+        
+        # Map user status to expected values
+        row = {
+            "cadence": cadence,
+            "period_start": period_start_str,
+            "period_end": period_end_str,
+            "account_id": account_id,
+            "gpt_id": gpt_id,
+            "gpt_name": gpt.name,
+            "gpt_description": gpt.description,
+            "gpt_url": f"https://chatgpt.com/g/{gpt_id}",
+            "gpt_creator": gpt.creator_id,
+            "gpt_creator_email": gpt.creator_email,
+            "is_active": 1 if activity.message_count > 0 else 0,  # Only active if gpt has received messages
+            "first_day_active_in_period": first_active_str,
+            "last_day_active_in_period": last_active_str,
+            "messages_workspace": activity.message_count,
+            "unique_messagers_workspace": len(activity.user_set),
+        }
+        active_rows.append(row)
+    
+    # Sort rows by messages (descending)
+    active_rows.sort(key=lambda x: x["messages_workspace"], reverse=True)
+    
+    # Write to CSV
+    if active_rows:
+        output_file = os.path.join(output_dir, f"gpt_engagement_{date_range_str}.csv")
+        with open(output_file, 'w', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=active_rows[0].keys())
+            writer.writeheader()
+            writer.writerows(active_rows)
+        print(f"Saved engagement metrics for {len(active_rows)} gpts to {output_file}")
+    else:
+        print("No gpt engagement data to save")
+    
+
 
 def process_engagement_data(raw_data: RawData, output_dir: str) -> None:
     # convert rawdata.earliest_message_timestamp and raw_data.latest_message_timestamp to datetime
+    # Add GPTs and Projects to the engagement metrics
     start_date = datetime.fromtimestamp(raw_data.earliest_message_timestamp, tz=DEFAULT_TIMEZONE)
     end_date = datetime.fromtimestamp(raw_data.latest_message_timestamp, tz=DEFAULT_TIMEZONE)   
     print(f"Processing engagement data for date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
     
-    user_metrics = get_engagement_metrics(raw_data)
+    # Create EngagementMetrics object with users and GPTs
+    user_metrics = EngagementMetrics(
+        users=raw_data.users,
+        gpts=raw_data.gpt_map
+    )
+    
+    # Process message data to populate metrics
+    user_metrics = get_engagement_metrics(raw_data, user_metrics)
 
     # Save engagement metrics to CSV
     save_engagement_metrics_to_csv(
@@ -491,7 +624,9 @@ def process_data_in_weekly_chunks(raw_data: RawData, output_dir: str) -> None:
         chunk_data = RawData(
             users=raw_data.users,
             earliest_message_timestamp=current_start.timestamp(),
-            latest_message_timestamp=current_end.timestamp()
+            latest_message_timestamp=current_end.timestamp(),
+            project_map=raw_data.project_map,
+            gpt_map=raw_data.gpt_map
         )
         
         # Process this week's data
@@ -570,8 +705,8 @@ def save_raw_data(raw_data: RawData, output_dir: str) -> tuple[str, str]:
                                 "id": msg.id,
                                 "created_at": msg.created_at,
                                 "role": msg.role,
-                                "gpt_name": msg.gpt_name,
-                                "project_name": msg.project_name,
+                                "gpt_id": msg.gpt_id,
+                                "project_id": msg.project_id,
                                 "tool_name": msg.tool_name
                             } for msg in conv.messages
                         ]

@@ -325,16 +325,21 @@
         <div class="file-list">
             <h2>Available Reports</h2>
             <div id="files">
-                <div class="file-item" data-file="data/active_gpts_trend.png" data-type="image">Active GPTs Trend</div>
+                <!-- User-focused reports first -->
                 <div class="file-item" data-file="data/active_users_trend.png" data-type="image">Active Users Trend</div>
-                <div class="file-item" data-file="data/gpt_messages_trend.png" data-type="image">GPT Messages Trend</div>
-                <div class="file-item" data-file="data/gpt_usage_trend.png" data-type="image">GPT Usage Trend</div>
+                <div class="file-item" data-file="data/message_volume_trend.png" data-type="image">Message Volume Trend</div>
                 <div class="file-item" data-file="data/message_histogram.png" data-type="image">Message Histogram</div>
                 <div class="file-item" data-file="data/message_histogram_log.png" data-type="image">Message Histogram (Log Scale)</div>
-                <div class="file-item" data-file="data/message_volume_trend.png" data-type="image">Message Volume Trend</div>
-                <div class="file-item" data-file="data/unique_messagers_trend.png" data-type="image">Unique Messagers Trend</div>
-                <div class="file-item" data-file="data/non_engaged_users_report.csv" data-type="csv" data-csv="non_engaged_users">Non-Engaged Users Report</div>
+                
+                <!-- GPT-focused reports next -->
+                <div class="file-item" data-file="data/active_gpts_trend.png" data-type="image">Active GPTs Trend</div>
+                <div class="file-item" data-file="data/gpt_messages_trend.png" data-type="image">GPT Messages Trend</div>
+                <div class="file-item" data-file="data/unique_messagers_trend.png" data-type="image">GPT Unique Users</div>
+                
+                <!-- CSV reports last -->
                 <div class="file-item" data-file="data/user_engagement_report.csv" data-type="csv" data-csv="user_engagement">User Engagement Report</div>
+                <div class="file-item" data-file="data/non_engaged_users_report.csv" data-type="csv" data-csv="non_engaged_users">Non-Engaged Users Report</div>
+                <!-- Removed duplicate GPT Usage Trend chart - same as GPT Messages Trend -->
             </div>
         </div>
 
