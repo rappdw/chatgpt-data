@@ -29,6 +29,8 @@ A command-line tool that fetches ChatGPT usage data via the Enterprise Complianc
 get_usage_data [--api-key API_KEY] [--org-id ORG_ID] [--output-dir DIRECTORY] [--start-date DATE] [--end-date DATE] [--skip-user-report] [--skip-gpt-report] [--run-analysis] [--analysis-output-dir DIRECTORY]
 ```
 
+> **Note:** API credentials (API_KEY, ORG_ID) must be provided either as command-line arguments, in a `.env` file in the project root, or as environment variables.
+
 Options:
 - `--api-key`: Enterprise API key (defaults to OPENAI_ENTERPRISE_API_KEY env var)
 - `--org-id`: Organization ID (defaults to OPENAI_ORG_ID env var)
@@ -132,11 +134,7 @@ Example `management_chains.json` format:
 Once all data files are in place, run the analysis:
 
 ```bash
-# Run the complete analysis
-python -m chatgpt_data.cli.all_trends
-
-# Generate only the engagement report with management chain information
-python -m chatgpt_data.cli.all_trends --skip-gpt-trends --skip-non-engaged-report
+all_trends
 ```
 
 The analysis will:
@@ -165,6 +163,49 @@ The analysis will:
 - `user_engagement_report.csv`: Report of user engagement levels (high, medium, low, none) based on average message count across all periods
   - Includes active period percentage (active periods / eligible periods since user creation)
 - `non_engaged_users_report.csv`: Report of users who have never engaged (either across all tracked periods or only in the latest period, depending on the `--latest-period-only` option)
+
+## Viewing Reports in the Web Interface
+
+The package includes a web interface that displays the generated graphs and reports in an interactive dashboard.
+
+### Starting the Web Server
+
+To start the web server, run the following command from the project root directory:
+
+```bash
+python server.py
+
+# or
+
+./server.py
+```
+
+This will start a local web server on port 8000. You should see a message indicating that the server is running:
+
+```
+Serving at http://localhost:8000
+```
+
+### Accessing the Dashboard
+
+Open your web browser and navigate to:
+
+```
+http://localhost:8000
+```
+
+The dashboard provides:
+
+1. A visual display of all generated trend graphs
+2. Interactive tables for the user engagement reports with:
+   - Filtering capabilities
+   - Sorting by any column
+   - Pagination for large datasets
+   - Management chain filtering
+
+### Generating New Reports
+
+You can generate new reports directly from the web interface by clicking the "Generate Reports" button. This will run the `all_trends` command and update the displayed graphs and reports when complete.
 
 ## Development
 

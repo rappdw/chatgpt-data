@@ -1,3 +1,42 @@
+# ChatGPT Data Analysis 1.1.0
+
+We're pleased to announce the release of ChatGPT Data Analysis 1.1.0, featuring significant improvements to the Enterprise Compliance API client and enhanced documentation.
+
+## What's New
+
+### Enhanced API Client
+
+- **Improved Error Handling**: Graceful handling for API authorization errors (401/403)
+- **Comprehensive Logging**: Better logging for API consistency issues
+- **Pagination Support**: Robust support for pagination in the conversations API endpoint
+- **Enhanced Testing**: More comprehensive mock data generation for testing scenarios
+- **Better Error Messages**: Improved CLI with detailed error messages and credential validation
+- **Consistent Test Mode**: Standardized workspace ID usage for test mode
+
+### Web Interface Documentation
+
+- Added documentation for viewing reports through the web interface
+- Instructions for starting the server and accessing the dashboard
+- Overview of interactive features available in the web UI
+
+### Other Improvements
+
+- Clarified API credential requirements in documentation
+- Updated CLI command examples
+- Various code quality improvements
+
+## Installation
+
+```bash
+# Using uv (recommended)
+uv pip install chatgpt-data
+
+# Using pip
+pip install chatgpt-data
+```
+
+---
+
 # ChatGPT Data Analysis 1.0.0
 
 We're excited to announce the first stable release of the ChatGPT Data Analysis package!
