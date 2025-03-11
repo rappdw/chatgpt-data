@@ -1,4 +1,4 @@
-"""Tests for the user analysis module."""
+"""Tests for the user analyzer module."""
 
 import os
 from pathlib import Path
@@ -8,7 +8,8 @@ import pandas as pd
 import pytest
 import matplotlib.pyplot as plt
 
-from chatgpt_data.analysis.user_analysis import UserAnalysis
+from chatgpt_data.analysis.user_analyzer import UserAnalyzer
+from chatgpt_data.utils.data_loader import UserDataLoader
 
 
 @pytest.fixture
@@ -29,27 +30,27 @@ def mock_user_data():
 
 
 class TestUserAnalysis:
-    """Test the UserAnalysis class."""
+    """Test the UserAnalyzer class."""
 
-    def test_load_data(self, mock_user_data, tmp_path):
-        """Test loading user data."""
+    def test_data_loader(self, mock_user_data, tmp_path):
+        """Test the data loader functionality."""
         # Create test files
         test_file = tmp_path / "proofpoint_user_engagement_test.csv"
         mock_user_data.to_csv(test_file, index=False)
         
-        # Execute
-        analyzer = UserAnalysis(tmp_path, tmp_path)
+        # Create a loader directly
+        loader = UserDataLoader(tmp_path)
+        data = loader.load_user_data()
         
         # Assert
-        assert analyzer.user_data is not None
-        assert len(analyzer.user_data) == len(mock_user_data)
+        assert data is not None
+        assert len(data) == len(mock_user_data)
 
     def test_generate_active_users_trend(self, mock_user_data, tmp_path):
         """Test generating active users trend."""
-        # Setup
-        with patch.object(UserAnalysis, '_load_data'):
-            analyzer = UserAnalysis(tmp_path, tmp_path)
-            analyzer.user_data = mock_user_data.copy()
+        # Setup - use patcher to avoid real loading
+        with patch('chatgpt_data.utils.data_loader.UserDataLoader.load_user_data', return_value=mock_user_data.copy()):
+            analyzer = UserAnalyzer(tmp_path, tmp_path)
         
         # Execute
         fig = analyzer.generate_active_users_trend(save=False)
@@ -59,10 +60,9 @@ class TestUserAnalysis:
         
     def test_generate_message_volume_trend(self, mock_user_data, tmp_path):
         """Test generating message volume trend."""
-        # Setup
-        with patch.object(UserAnalysis, '_load_data'):
-            analyzer = UserAnalysis(tmp_path, tmp_path)
-            analyzer.user_data = mock_user_data.copy()
+        # Setup - use patcher to avoid real loading
+        with patch('chatgpt_data.utils.data_loader.UserDataLoader.load_user_data', return_value=mock_user_data.copy()):
+            analyzer = UserAnalyzer(tmp_path, tmp_path)
         
         # Execute
         fig = analyzer.generate_message_volume_trend(save=False)
@@ -70,33 +70,22 @@ class TestUserAnalysis:
         # Assert
         assert fig is not None
         
-    def test_generate_gpt_usage_trend(self, mock_user_data, tmp_path):
-        """Test generating GPT usage trend."""
-        # Setup
-        with patch.object(UserAnalysis, '_load_data'):
-            analyzer = UserAnalysis(tmp_path, tmp_path)
-            analyzer.user_data = mock_user_data.copy()
-        
-        # Execute
-        fig = analyzer.generate_gpt_usage_trend(save=False)
-        
-        # Assert
-        assert fig is not None
+    # Note: Removed test_generate_gpt_usage_trend as we moved this feature to GPTAnalyzer
         
     def test_generate_message_histogram(self, mock_user_data, tmp_path):
         """Test generating a message histogram."""
-        with patch.object(UserAnalysis, '_load_data'):
-            analysis = UserAnalysis(data_dir=tmp_path, output_dir=tmp_path)
-            analysis.user_data = mock_user_data
-            
-            # Test with default parameters
-            fig = analysis.generate_message_histogram(save=False)
-            assert isinstance(fig, plt.Figure)
-            
-            # Test with custom parameters
-            fig = analysis.generate_message_histogram(bins=10, max_value=50, save=False)
-            assert isinstance(fig, plt.Figure)
-            
-            # Test saving the figure
-            analysis.generate_message_histogram(save=True)
-            assert (tmp_path / "message_histogram.png").exists()
+        # Setup - use patcher to avoid real loading
+        with patch('chatgpt_data.utils.data_loader.UserDataLoader.load_user_data', return_value=mock_user_data.copy()):
+            analyzer = UserAnalyzer(tmp_path, tmp_path)
+        
+        # Test with default parameters
+        fig = analyzer.generate_message_histogram(save=False)
+        assert isinstance(fig, plt.Figure)
+        
+        # Test with custom parameters
+        fig = analyzer.generate_message_histogram(bins=10, max_value=50, save=False)
+        assert isinstance(fig, plt.Figure)
+        
+        # Test saving the figure
+        analyzer.generate_message_histogram(save=True)
+        assert (tmp_path / "message_histogram.png").exists()

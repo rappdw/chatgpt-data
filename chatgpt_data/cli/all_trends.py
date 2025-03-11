@@ -2,8 +2,9 @@ import argparse
 import os
 from pathlib import Path
 
-from chatgpt_data.analysis.user_analysis import UserAnalysis
-from chatgpt_data.analysis.gpt_analysis import GPTAnalysis
+from chatgpt_data.analysis.user_analyzer import UserAnalyzer
+from chatgpt_data.analysis.gpt_analyzer import GPTAnalyzer
+from chatgpt_data.analysis.report_generator import ReportGenerator
 
 
 def main():
@@ -91,7 +92,7 @@ def main():
     if args.only_message_histogram:
         print("\n=== Generating Message Histogram ===")
         try:
-            user_analyzer = UserAnalysis(args.data_dir, output_dir)
+            user_analyzer = UserAnalyzer(args.data_dir, output_dir)
             user_analyzer.generate_message_histogram(bins=args.histogram_bins, max_value=args.histogram_max)
             print(f"✓ Message histogram saved to {output_dir / 'message_histogram.png'}")
         except Exception as e:
@@ -105,22 +106,26 @@ def main():
     if not args.skip_user_trends:
         print("\n=== Running User Analysis ===")
         try:
-            user_analyzer = UserAnalysis(args.data_dir, output_dir)
+            # Create the analyzer
+            user_analyzer = UserAnalyzer(args.data_dir, output_dir)
             
             # Generate user trend graphs
             user_analyzer.generate_all_trends()
             print("✓ User trend graphs generated")
             
+            # Create report generator
+            report_generator = ReportGenerator(user_analyzer)
+            
             # Generate engagement report if not skipped
             if not args.skip_engagement_report:
                 engagement_file = output_dir / "user_engagement_report.csv"
-                user_analyzer.generate_engagement_report(output_file=str(engagement_file))
+                report_generator.generate_engagement_report(output_file=str(engagement_file))
                 print(f"✓ User engagement report saved to {engagement_file}")
             
             # Generate non-engaged users report if not skipped
             if not args.skip_non_engaged_report:
                 non_engaged_file = output_dir / "non_engaged_users_report.csv"
-                user_analyzer.generate_non_engagement_report(
+                report_generator.generate_non_engagement_report(
                     output_file=str(non_engaged_file),
                     only_latest_period=args.latest_period_only
                 )
@@ -134,7 +139,7 @@ def main():
     if not args.skip_gpt_trends:
         print("\n=== Running GPT Analysis ===")
         try:
-            gpt_analyzer = GPTAnalysis(args.data_dir, output_dir)
+            gpt_analyzer = GPTAnalyzer(args.data_dir, output_dir)
             
             # Generate GPT trend graphs
             gpt_analyzer.generate_all_trends()
