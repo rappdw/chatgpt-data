@@ -113,9 +113,10 @@ To resolve user names and email addresses:
 
 ### 3. Management Chain Information
 To include organizational hierarchy in the reports:
-- Export company information from Workday
-- Process this data using the `management_chains` tool from the `graphviz_workday` repository
-- Save the resulting `management_chains.json` file in the `rawdata` directory
+- Export company information from Workday (select CEO's team and print the team including all levels as excel)
+- Save "Proofpoint.xlsx" in the `rawdata` directory
+- Process this data using the `management_chains` tool
+- This will save the resulting `management_chains.json` file in the `rawdata` directory
 - The JSON file should map employee names to their management chain (array of manager names)
 
 Example `management_chains.json` format:

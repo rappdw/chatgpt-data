@@ -213,7 +213,7 @@ def get_engagement_metrics(raw_data: RawData, engagement_metrics: Optional[Engag
                         user_metrics.tool_set.add(message.tool_name)
                     else:
                         user_metrics.tool_set.add("unknown")
-                if message.tool_name and message.role != "tool":
+                if message.tool_name and message.role not in {"tool", "assistant"}:
                     print(f"WARNING: Message with role {message.role} has tool name {message.tool_name}")
                     user_metrics.tool_set.add(message.tool_name)
                 if message.gpt_id:

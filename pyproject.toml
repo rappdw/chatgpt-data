@@ -16,6 +16,7 @@ dependencies = [
     "pandas>=1.3.0",
     "matplotlib>=3.4.0",
     "requests>=2.25.0",
+    "openpyxl>=3.0.0",
 ]
 
 [project.scripts]
@@ -23,6 +24,7 @@ user_trends = "chatgpt_data.cli.user_trends:main"
 gpt_trends = "chatgpt_data.cli.gpt_trends:main"
 all_trends = "chatgpt_data.cli.all_trends:main"
 get_usage_data = "chatgpt_data.cli.api_reports:main"
+management_chains = "chatgpt_data.utils.management_chain:main"
 
 [project.optional-dependencies]
 dev = [
