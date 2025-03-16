@@ -14,9 +14,11 @@ import requests
 from dataclasses import dataclass, field
 import pandas as pd
 from urllib.parse import urljoin
+from tqdm import tqdm
 
 
-# Configure logger for API consistency issues
+# Configure loggers
+# Logger for API consistency issues
 api_consistency_logger = logging.getLogger('api_consistency_issues')
 api_consistency_logger.setLevel(logging.WARNING)
 
@@ -27,6 +29,18 @@ if not api_consistency_logger.handlers:
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     file_handler.setFormatter(formatter)
     api_consistency_logger.addHandler(file_handler)
+
+# Logger for general API client operations
+logger = logging.getLogger('compliance_api')
+logger.setLevel(logging.WARNING)
+
+# Create console handler if not already added
+if not logger.handlers:
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.WARNING)
+    formatter = logging.Formatter('%(levelname)s - %(message)s')
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
 
 
 @dataclass
@@ -109,14 +123,14 @@ class EnterpriseComplianceAPI:
             "OpenAI-Organization": self.org_id
         }
         
-        print(f"Initialized Enterprise Compliance API client for workspace: {self.workspace_id}")
-        print(f"Output directory: {self.output_dir}")
-        print(f"Page size: {self.page_size}")
-        print(f"Mock data fallback: {'Enabled' if self.allow_mock_data else 'Disabled'}")
+        logger.info(f"Initialized Enterprise Compliance API client for workspace: {self.workspace_id}")
+        logger.info(f"Output directory: {self.output_dir}")
+        logger.info(f"Page size: {self.page_size}")
+        logger.info(f"Mock data fallback: {'Enabled' if self.allow_mock_data else 'Disabled'}")
         
         # Check if we're in test mode
         if api_key == "test_api_key" or api_key.startswith("test_"):
-            print("Running in test mode with mock data")
+            logger.info("Running in test mode with mock data")
             self.allow_mock_data = True
     
     def _make_request(
@@ -184,12 +198,12 @@ class EnterpriseComplianceAPI:
                 # Check if this is an invalid GPT or project ID error
                 if "Invalid gpt_id" in response_text and "/gpts/" in endpoint:
                     gpt_id = endpoint.split('/gpts/')[-1].split('/')[0]
-                    print(f"Invalid GPT ID format: {gpt_id}")
+                    logger.warning(f"Invalid GPT ID format: {gpt_id}")
                     raise requests.exceptions.HTTPError(f"GPT not found", response=e.response)
                     
                 elif "Invalid project_id" in response_text and "/projects/" in endpoint:
                     project_id = endpoint.split('/projects/')[-1].split('/')[0]
-                    print(f"Invalid project ID format: {project_id}")
+                    logger.warning(f"Invalid project ID format: {project_id}")
                     raise requests.exceptions.HTTPError(f"Project not found", response=e.response)
             
             # Check if this is a server error (5xx) that should be retried
@@ -213,19 +227,19 @@ class EnterpriseComplianceAPI:
                 if hasattr(e.response, 'text') and e.response.text:
                     error_message += f"\nResponse text: {e.response.text[:200]}..."
             
-            print(error_message)
+            logger.error(error_message)
             
             # Include request details in the error message
             if params:
-                print(f"Request parameters: {params}")
+                logger.debug(f"Request parameters: {params}")
             if json_data:
-                print(f"JSON Data: {json_data}")
+                logger.debug(f"JSON Data: {json_data}")
             
             # Handle retry logic for server errors
             if is_server_error and _retry_count < max_retries:
                 _retry_count += 1
                 retry_delay = 2 ** _retry_count  # Exponential backoff: 2, 4, 8 seconds
-                print(f"Server error encountered. Retrying in {retry_delay} seconds... (Attempt {_retry_count}/{max_retries})")
+                logger.warning(f"Server error encountered. Retrying in {retry_delay} seconds... (Attempt {_retry_count}/{max_retries})")
                 import time
                 time.sleep(retry_delay)
                 return self._make_request(
@@ -237,21 +251,21 @@ class EnterpriseComplianceAPI:
                     _retry_count=_retry_count
                 )
             elif is_server_error and _retry_count >= max_retries:
-                print(f"Server error persisted after {max_retries} retry attempts. Exiting program.")
+                logger.error(f"Server error persisted after {max_retries} retry attempts. Exiting program.")
                 import sys
                 sys.exit(1)  # Exit with error code 1
                 
             raise Exception(f"API request failed: {error_message}")
         except requests.exceptions.Timeout:
-            print(f"Request timed out after {timeout} seconds")
-            print(f"URL: {url}")
-            print(f"Method: {method}")
+            logger.error(f"Request timed out after {timeout} seconds")
+            logger.error(f"URL: {url}")
+            logger.error(f"Method: {method}")
             
             # Handle retry logic for timeouts
             if _retry_count < max_retries:
                 _retry_count += 1
                 retry_delay = 2 ** _retry_count  # Exponential backoff
-                print(f"Request timed out. Retrying in {retry_delay} seconds... (Attempt {_retry_count}/{max_retries})")
+                logger.warning(f"Request timed out. Retrying in {retry_delay} seconds... (Attempt {_retry_count}/{max_retries})")
                 import time
                 time.sleep(retry_delay)
                 return self._make_request(
@@ -263,21 +277,21 @@ class EnterpriseComplianceAPI:
                     _retry_count=_retry_count
                 )
             elif _retry_count >= max_retries:
-                print(f"Request timeout persisted after {max_retries} retry attempts. Exiting program.")
+                logger.error(f"Request timeout persisted after {max_retries} retry attempts. Exiting program.")
                 import sys
                 sys.exit(1)  # Exit with error code 1
                 
             raise Exception(f"Request timed out after {timeout} seconds")
         except requests.exceptions.RequestException as e:
             # Handle other request exceptions (connection errors, etc.)
-            print(f"Request Error: {str(e)}")
-            print(f"URL: {url}")
+            logger.error(f"Request Error: {str(e)}")
+            logger.error(f"URL: {url}")
             
             # Handle retry logic for general request exceptions
             if _retry_count < max_retries:
                 _retry_count += 1
                 retry_delay = 2 ** _retry_count  # Exponential backoff
-                print(f"Request error encountered. Retrying in {retry_delay} seconds... (Attempt {_retry_count}/{max_retries})")
+                logger.warning(f"Request error encountered. Retrying in {retry_delay} seconds... (Attempt {_retry_count}/{max_retries})")
                 import time
                 time.sleep(retry_delay)
                 return self._make_request(
@@ -289,7 +303,7 @@ class EnterpriseComplianceAPI:
                     _retry_count=_retry_count
                 )
             elif _retry_count >= max_retries:
-                print(f"Request error persisted after {max_retries} retry attempts. Exiting program.")
+                logger.error(f"Request error persisted after {max_retries} retry attempts. Exiting program.")
                 import sys
                 sys.exit(1)  # Exit with error code 1
                 
@@ -331,10 +345,10 @@ class EnterpriseComplianceAPI:
             return response
             
         except Exception as e:
-            print(f"API request failed when fetching users: {str(e)}")
+            logger.error(f"API request failed when fetching users: {str(e)}")
             
             if self.allow_mock_data:
-                print("Using mock user data for testing...")
+                logger.info("Using mock user data for testing...")
                 
                 # Create mock user data
                 mock_users = []
@@ -358,17 +372,20 @@ class EnterpriseComplianceAPI:
                     "last_id": mock_users[-1]["id"] if mock_users else None
                 }
                 
-                print(f"Generated {len(mock_users)} mock users")
+                logger.info(f"Generated {len(mock_users)} mock users")
                 return mock_response
             else:
                 # If mock data is not allowed, raise the exception
                 raise Exception(f"Users endpoint failed: {str(e)}")
     
-    def get_all_users(self) -> Dict[str, User]:
+    def get_all_users(self, use_tqdm: bool = False) -> Dict[str, User]:
         """Get all users from the workspace with automatic pagination.
         
         This method handles pagination automatically and returns a dictionary of User objects
         keyed by user_id.
+        
+        Args:
+            use_tqdm: If True, show a progress bar
         
         Returns:
             Dictionary of User objects keyed by user_id
@@ -380,11 +397,38 @@ class EnterpriseComplianceAPI:
         after = None
         has_more = True
         
+        # First, get the first page to determine total count if possible
+        first_response = self.get_users(after=after)
+        total_users = first_response.get("total", 0)
+        
+        # Process users from the first page
+        for user_data in first_response.get("data", []):
+            user = User(
+                user_id=user_data.get("id", ""),
+                email=user_data.get("email", ""),
+                name=user_data.get("name", ""),
+                role=user_data.get("role", ""),
+                created_at=user_data.get("created_at", 0),
+                status=user_data.get("status", "")
+            )
+            users[user.user_id] = user
+        
+        # Check if we need to fetch more pages
+        has_more = first_response.get("has_more", False)
+        after = first_response.get("last_id")
+        
+        # Create progress bar if requested
+        pbar = None
+        if use_tqdm:
+            pbar = tqdm(desc="Fetching users", unit="user")
+            pbar.update(len(users))
+        
         while has_more:
             response = self.get_users(after=after)
             
             # Process users from this page
-            for user_data in response.get("data", []):
+            new_users = response.get("data", [])
+            for user_data in new_users:
                 user = User(
                     user_id=user_data.get("id", ""),
                     email=user_data.get("email", ""),
@@ -395,9 +439,17 @@ class EnterpriseComplianceAPI:
                 )
                 users[user.user_id] = user
             
+            # Update progress bar
+            if pbar is not None:
+                pbar.update(len(new_users))
+            
             # Check if we need to fetch more pages
             has_more = response.get("has_more", False)
             after = response.get("last_id")
+        
+        # Close progress bar
+        if pbar is not None:
+            pbar.close()
         
         return users
     
@@ -546,10 +598,10 @@ class EnterpriseComplianceAPI:
             return response
             
         except Exception as e:
-            print(f"API request failed when fetching conversations: {str(e)}")
+            logger.error(f"API request failed when fetching conversations: {str(e)}")
             
             if self.allow_mock_data:
-                print("Using mock conversation data for testing...")
+                logger.info("Using mock conversation data for testing...")
                 
                 # Create mock conversation data
                 mock_conversations = []
@@ -610,7 +662,7 @@ class EnterpriseComplianceAPI:
                     "last_id": mock_conversations[-1]["id"] if mock_conversations else None
                 }
                 
-                print(f"Generated {len(mock_conversations)} mock conversations")
+                logger.info(f"Generated {len(mock_conversations)} mock conversations")
                 return mock_response
             else:
                 # If mock data is not allowed, raise the exception
@@ -623,7 +675,8 @@ class EnterpriseComplianceAPI:
         users: Optional[List[str]] = None,
         file_format: str = "url",
         max_retries: int = 3,
-        debug_logging: bool = False
+        debug_logging: bool = False,
+        use_tqdm: bool = False
     ) -> int:
         """Process all conversations from the workspace with automatic pagination.
         
@@ -656,10 +709,64 @@ class EnterpriseComplianceAPI:
         page_count = 0
         retry_count = 0
         
+        # First, get the first page to determine total count if possible
+        try:
+            first_response = self.list_conversations(
+                since_timestamp=since_timestamp,
+                after=after,
+                users=users,
+                file_format=file_format
+            )
+            total_conversations = first_response.get("total", 0)
+            
+            # Process conversations from the first page
+            first_page_conversations = first_response.get("data", [])
+            
+            # Create progress bar if requested
+            pbar = None
+            if use_tqdm:
+                pbar = tqdm(desc="Processing conversations", unit="conv")
+            
+            # Process first page conversations
+            for conversation in first_page_conversations:
+                conversation_id = conversation.get("id")
+                
+                # Skip if we've already processed this conversation
+                if conversation_id in processed_ids:
+                    if debug_logging:
+                        print(f"Skipping already processed conversation: {conversation_id}")
+                    continue
+                    
+                # Call the callback function with the conversation
+                try:
+                    callback_fn(conversation)
+                    
+                    # Mark as processed
+                    processed_ids.add(conversation_id)
+                    processed_count += 1
+                    
+                    # Update progress bar
+                    if pbar is not None:
+                        pbar.update(1)
+                except Exception as e:
+                    # print stack trace
+                    import traceback
+                    logger.error(traceback.format_exc())
+                    logger.error(f"Error processing conversation {conversation_id}: {str(e)}")
+            
+            # Check if we need to fetch more pages
+            has_more = first_response.get("has_more", False)
+            after = first_response.get("last_id")
+            page_count += 1
+            
+        except Exception as e:
+            logger.error(f"Error fetching first conversation page: {str(e)}")
+            # Continue with the main loop which will handle retries
+        
         while has_more:
             page_count += 1
             if debug_logging:
-                print(f"\nFetching conversation page {page_count} (after={after})")
+                logger.debug(f"Fetching conversation page {page_count} (after={after})")
                 
             try:
                 response = self.list_conversations(
@@ -672,7 +779,7 @@ class EnterpriseComplianceAPI:
                 # Process conversations from this page
                 conversations = response.get("data", [])
                 if debug_logging:
-                    print(f"Retrieved {len(conversations)} conversations on page {page_count}")
+                    logger.debug(f"Retrieved {len(conversations)} conversations on page {page_count}")
                 
                 for conversation in conversations:
                     conversation_id = conversation.get("id")
@@ -680,7 +787,7 @@ class EnterpriseComplianceAPI:
                     # Skip if we've already processed this conversation
                     if conversation_id in processed_ids:
                         if debug_logging:
-                            print(f"Skipping already processed conversation: {conversation_id}")
+                            logger.debug(f"Skipping already processed conversation: {conversation_id}")
                         continue
                         
                     # Call the callback function with the conversation
@@ -690,11 +797,15 @@ class EnterpriseComplianceAPI:
                         # Mark as processed
                         processed_ids.add(conversation_id)
                         processed_count += 1
+                        
+                        # Update progress bar
+                        if 'pbar' in locals() and pbar is not None:
+                            pbar.update(1)
                     except Exception as e:
                         # print stack trace
                         import traceback
-                        print(traceback.format_exc())
-                        print(f"Error processing conversation {conversation_id}: {str(e)}")
+                        logger.error(traceback.format_exc())
+                        logger.error(f"Error processing conversation {conversation_id}: {str(e)}")
                 
                 # Check if we need to fetch more pages
                 has_more = response.get("has_more", False)
@@ -705,24 +816,28 @@ class EnterpriseComplianceAPI:
                 
             except Exception as e:
                 retry_count += 1
-                print(f"Error fetching conversation page {page_count}: {str(e)}")
+                logger.error(f"Error fetching conversation page {page_count}: {str(e)}")
                 
                 if retry_count <= max_retries:
-                    print(f"Retrying (attempt {retry_count}/{max_retries})...")
+                    logger.warning(f"Retrying (attempt {retry_count}/{max_retries})...")
                     # Continue the loop without changing after, to retry the same page
                     continue
                 else:
-                    print(f"Max retries ({max_retries}) exceeded, skipping to next page")
+                    logger.warning(f"Max retries ({max_retries}) exceeded, skipping to next page")
                     # If we've reached max retries, try to continue with the next page if possible
                     if after:
-                        print(f"Continuing from last known ID: {after}")
+                        logger.info(f"Continuing from last known ID: {after}")
                         retry_count = 0
                     else:
-                        print("No pagination token available, stopping pagination")
+                        logger.warning("No pagination token available, stopping pagination")
                         has_more = False
         
         if debug_logging:
-            print(f"\nProcessed {processed_count} conversations across {page_count} pages")
+            logger.info(f"Processed {processed_count} conversations across {page_count} pages")
+        
+        # Close progress bar
+        if 'pbar' in locals() and pbar is not None:
+            pbar.close()
             
         return processed_count
     
@@ -917,13 +1032,13 @@ class EnterpriseComplianceAPI:
                 method="DELETE"
             )
             
-            print(f"Successfully deleted conversation: {conversation_id}")
+            logger.info(f"Successfully deleted conversation: {conversation_id}")
             
         except Exception as e:
-            print(f"API request failed when deleting conversation: {str(e)}")
+            logger.error(f"API request failed when deleting conversation: {str(e)}")
             
             if self.allow_mock_data:
-                print(f"Mock deletion of conversation: {conversation_id}")
+                logger.info(f"Mock deletion of conversation: {conversation_id}")
             else:
                 # If mock data is not allowed, raise the exception
                 raise Exception(f"Delete conversation endpoint failed: {str(e)}")

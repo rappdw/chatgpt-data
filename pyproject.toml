@@ -17,13 +17,15 @@ dependencies = [
     "matplotlib>=3.4.0",
     "requests>=2.25.0",
     "openpyxl>=3.0.0",
+    "tqdm>=4.64.0",
 ]
 
 [project.scripts]
 user_trends = "chatgpt_data.cli.user_trends:main"
 gpt_trends = "chatgpt_data.cli.gpt_trends:main"
 all_trends = "chatgpt_data.cli.all_trends:main"
-get_usage_data = "chatgpt_data.cli.api_reports:main"
+fetch_raw_data = "chatgpt_data.cli.fetch_raw_data:main"
+process_engagement = "chatgpt_data.cli.process_engagement:main"
 management_chains = "chatgpt_data.utils.management_chain:main"
 
 [project.optional-dependencies]

@@ -13,7 +13,8 @@ import glob
 import pickle
 import json
 from pathlib import Path
-        
+from tqdm import tqdm
+import sys
 
 from chatgpt_data.api.compliance_api import EnterpriseComplianceAPI, User, GPT, Project
 from chatgpt_data.cli.all_trends import main as run_all_trends
@@ -262,10 +263,10 @@ def get_users_conversations(api: EnterpriseComplianceAPI, debug_logging: bool = 
     Returns:
         A dictionary of users and their engagement data
     """
-    print("\nCalculating user engagement metrics...")
     
-    # Get all users
-    users_dict = api.get_all_users()
+    print("Fetching users...")
+    # Get all users with progress tracking
+    users_dict = api.get_all_users(use_tqdm=True)
     conversation_count = 0
     message_count = 0
     project_map = dict()
@@ -325,10 +326,12 @@ def get_users_conversations(api: EnterpriseComplianceAPI, debug_logging: bool = 
             conversation_data.messages.append(message_data)
             message_count += 1
     
-    # Process all conversations
+    # Process all conversations with progress tracking
+    print("Processing conversations...")
     api.process_all_conversations(
         callback_fn=process_conversation,
-        debug_logging=debug_logging
+        debug_logging=debug_logging,
+        use_tqdm=True
     )
     
     # Print summary statistics for verification
@@ -343,6 +346,29 @@ def get_users_conversations(api: EnterpriseComplianceAPI, debug_logging: bool = 
         earliest_message_timestamp=earliest_message_timestamp,
         latest_message_timestamp=most_recent_message_timestamp
     )
+
+def find_existing_csv_files(output_dir: str) -> List[str]:
+    """
+    Find existing CSV files in the output directory that match engagement report patterns.
+    
+    Args:
+        output_dir: Directory to search for CSV files
+        
+    Returns:
+        List of paths to existing CSV files
+    """
+    patterns = [
+        "user_engagement_*.csv",
+        "non_engagement_*.csv",
+        "gpt_engagement_*.csv",
+        "gpt_non_engagement_*.csv"
+    ]
+    
+    existing_files = []
+    for pattern in patterns:
+        existing_files.extend(glob.glob(os.path.join(output_dir, pattern)))
+    
+    return existing_files
 
 def save_engagement_metrics_to_csv(metrics: EngagementMetrics, output_dir: str, end_date: datetime, start_date: datetime) -> None:
     save_user_engagement_metrics_to_csv(metrics, output_dir, end_date, start_date)
@@ -562,17 +588,39 @@ def process_engagement_data(raw_data: RawData, output_dir: str) -> None:
         start_date=start_date
     )
 
-def process_data_in_weekly_chunks(raw_data: RawData, output_dir: str) -> None:
+def process_data_in_weekly_chunks(raw_data: RawData, output_dir: str, allow_partial_weeks: bool = False) -> None:
     """
     Process data in weekly chunks from the earliest to latest timestamp in raw_data.
     
     Args:
         raw_data: The raw data containing users and timestamp information
         output_dir: Directory to save output files
+        allow_partial_weeks: If True, process partial weeks at the end of the date range
         
     Returns:
         None
     """
+    # Check for existing CSV files before processing any chunks
+    existing_files = find_existing_csv_files(output_dir)
+    if existing_files:
+        print(f"Found {len(existing_files)} existing CSV files in {output_dir}")
+        for file in existing_files[:5]:  # Show up to 5 files
+            print(f"  - {os.path.basename(file)}")
+        if len(existing_files) > 5:
+            print(f"  - ... and {len(existing_files) - 5} more")
+            
+        # Ask user for confirmation
+        response = input("\nDelete these files before proceeding with weekly processing? [y/N] ").strip().lower()
+        if response == 'y' or response == 'yes':
+            for file in existing_files:
+                try:
+                    os.remove(file)
+                    print(f"Deleted: {os.path.basename(file)}")
+                except Exception as e:
+                    print(f"Error deleting {file}: {str(e)}")
+            print(f"Deleted {len(existing_files)} existing files")
+        else:
+            print("Keeping existing files")
     
     # Get datetime objects from timestamps
     raw_start_dt = datetime.fromtimestamp(raw_data.earliest_message_timestamp, tz=DEFAULT_TIMEZONE)
@@ -590,6 +638,12 @@ def process_data_in_weekly_chunks(raw_data: RawData, output_dir: str) -> None:
         # Don't go beyond the overall end date
         if current_end > end_date:
             current_end = end_date
+            
+            # Check if this is a partial week and skip if not allowed
+            days_in_chunk = (current_end - current_start).days + 1
+            if not allow_partial_weeks and days_in_chunk < 7:
+                print(f"Skipping partial week with only {days_in_chunk} days (from {current_start.strftime('%Y-%m-%d')} to {current_end.strftime('%Y-%m-%d')})")
+                break
         
         # Create a copy of raw_data with updated timestamps for this chunk
         # Ensure timezone-aware datetime objects for timestamp conversion
@@ -607,6 +661,7 @@ def process_data_in_weekly_chunks(raw_data: RawData, output_dir: str) -> None:
         )
         
         # Process this week's data
+        print(f"Processing data for week: {current_start.strftime('%Y-%m-%d')} to {current_end.strftime('%Y-%m-%d')}")
         process_engagement_data(chunk_data, output_dir)
         
         # Move to next week (start of next day)
@@ -776,184 +831,3 @@ def load_existing_data(output_dir: str, force: bool = False) -> tuple[Optional[R
                 raw_data = None
     
     return raw_data, loaded_data
-
-def main() -> None:
-    """Main entry point for the CLI tool."""
-    # Load environment variables from .env file if it exists
-    load_dotenv()
-    
-    parser = argparse.ArgumentParser(
-        description="Fetch ChatGPT usage reports via the Enterprise Compliance API"
-    )
-    
-    # Data options
-    data_group = parser.add_argument_group("Data Options")
-    data_group.add_argument(
-        "--workspace-id",
-        help="Workspace ID to fetch data from (default: from environment variable)",
-    )
-    data_group.add_argument(
-        "--api-key",
-        help="Enterprise API key with compliance_export scope (default: from environment variable)",
-    )
-    data_group.add_argument(
-        "--org-id",
-        help="Organization ID (default: from environment variable)",
-    )
-    data_group.add_argument(
-        "--start-date",
-        type=parse_date,
-        help="Start date for reports (YYYY-MM-DD, default: earliest observed date)",
-    )
-    data_group.add_argument(
-        "--end-date",
-        type=parse_date,
-        help="End date for reports (YYYY-MM-DD, default: most recent observed date)",
-    )
-    data_group.add_argument(
-        "--output-dir",
-        default="./reports",
-        help="Directory to save reports (default: ./reports)",
-    )
-    data_group.add_argument(
-        "--test",
-        action="store_true",
-        help="Run in test mode with mock data",
-    )
-    data_group.add_argument(
-        "--debug",
-        action="store_true",
-        help="Enable detailed debug logging for verification",
-    )
-    
-    # Analysis options
-    analysis_group = parser.add_argument_group("Analysis Options")
-    analysis_group.add_argument(
-        "--run-analysis",
-        action="store_true",
-        help="Run data analysis after downloading reports"
-    )
-    analysis_group.add_argument(
-        "--analysis-output-dir",
-        default="./data",
-        help="Directory to save analysis output (default: ./data)"
-    )
-    
-    # Add page_size parameter
-    parser.add_argument(
-        "--page-size",
-        type=int,
-        default=200,
-        help="Number of items to request per API page (default: 200, max: 200)"
-    )
-    
-    parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Force API calls even if existing pickle files are found"
-    )
-    
-    args = parser.parse_args()
-    
-    # Run the command
-    try:
-        # Initialize API client
-        api_key = args.api_key or os.environ.get("API_KEY")
-        org_id = args.org_id or os.environ.get("ORG_ID")
-        workspace_id = args.workspace_id or os.environ.get("WORKSPACE_ID")
-        
-        # Validate required credentials
-        missing_credentials = False
-        if not api_key:
-            print("ERROR: API key is required. Provide via --api-key or API_KEY env var")
-            missing_credentials = True
-            
-        if not org_id:
-            print("WARNING: Organization ID not provided. Using default value")
-            org_id = "org_default"
-            
-        if not workspace_id:
-            print("WARNING: Workspace ID not provided. Using default value")
-            workspace_id = "05a09bbb-00b5-4224-bee8-739bb86ec062"
-        
-        if missing_credentials:
-            print("\nExiting due to missing credentials")
-            return 1
-        
-        # Print date range
-        if args.start_date and args.end_date:
-            print(f"Date range: {args.start_date.strftime('%Y-%m-%d')} to {args.end_date.strftime('%Y-%m-%d')}")
-        
-        raw_data, loaded_data = load_existing_data(args.output_dir, args.force)
-        
-        try:
-            # Get users data from API if needed
-            if not loaded_data:
-                # Initialize the API client
-                api = EnterpriseComplianceAPI(
-                    api_key=api_key,
-                    org_id=org_id,
-                    workspace_id=workspace_id,
-                    output_dir=args.output_dir,
-                    page_size=min(args.page_size, 200)  # Ensure page_size doesn't exceed API limit
-                )
-                
-                # Get user engagement metrics
-                raw_data = get_users_conversations(api, debug_logging=args.debug)
-
-                # Save raw data to disk for later analysis
-                save_raw_data(raw_data, args.output_dir)
-
-            # Apply date filters if provided
-            raw_data = apply_date_filters(raw_data, args.start_date, args.end_date)
-
-            if args.start_date and args.end_date:
-                process_engagement_data(raw_data, args.output_dir)
-            else:
-                # Process data in weekly chunks
-                process_data_in_weekly_chunks(raw_data, args.output_dir)
-        
-        except Exception as e:
-            # print stack trace
-            import traceback
-            traceback.print_exc()
-            print(f"Error fetching workspace users: {str(e)}")
-            print("This could be due to:")
-            print("  - Invalid API credentials")
-            print("  - Insufficient permissions for the compliance API")
-            print("  - Network connectivity issues")
-            print("  - API rate limiting")
-        
-        # Run analysis if requested
-        if args.run_analysis:
-            print("Running data analysis...")
-            try:
-                # Use modified sys.argv to call all_trends with the right parameters
-                import sys
-                original_argv = sys.argv.copy()
-                sys.argv = [
-                    "all_trends",
-                    "--data-dir", args.output_dir,
-                    "--output-dir", args.analysis_output_dir
-                ]
-                
-                run_all_trends()
-                
-                # Restore original argv
-                sys.argv = original_argv
-                
-                print(f"Analysis complete. Results saved to {args.analysis_output_dir}")
-            except Exception as e:
-                print(f"Error running analysis: {str(e)}")
-        
-        print("\nNote: If you're experiencing API rate limiting, try using a smaller page size:")
-        print("  python -m chatgpt_data.cli.api_reports --page-size 50")
-        
-        return 0
-    except Exception as e:
-        print(f"An error occurred: {str(e)}")
-        return 1
-
-
-if __name__ == "__main__":
-    main()

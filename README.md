@@ -22,25 +22,37 @@ pip install -e .
 
 ## CLI Commands
 
-### get_usage_data
-A command-line tool that fetches ChatGPT usage data via the Enterprise Compliance API and saves it to the rawdata directory.
+### fetch_raw_data
+A command-line tool that fetches raw data from the ChatGPT Enterprise Compliance API and saves it for later processing.
 
 ```bash
-get_usage_data [--api-key API_KEY] [--org-id ORG_ID] [--output-dir DIRECTORY] [--start-date DATE] [--end-date DATE] [--skip-user-report] [--skip-gpt-report] [--run-analysis] [--analysis-output-dir DIRECTORY]
+fetch_raw_data [--workspace-id WORKSPACE_ID] [--api-key API_KEY] [--org-id ORG_ID] [--output-dir DIRECTORY] [--debug] [--page-size SIZE]
 ```
 
 > **Note:** API credentials (API_KEY, ORG_ID) must be provided either as command-line arguments, in a `.env` file in the project root, or as environment variables.
 
 Options:
-- `--api-key`: Enterprise API key (defaults to OPENAI_ENTERPRISE_API_KEY env var)
-- `--org-id`: Organization ID (defaults to OPENAI_ORG_ID env var)
-- `--output-dir`: Directory to save downloaded reports (default: ./rawdata)
-- `--start-date`: Start date in YYYY-MM-DD format (default: previous Sunday)
-- `--end-date`: End date in YYYY-MM-DD format (default: previous Saturday)
-- `--skip-user-report`: Skip downloading user engagement report
-- `--skip-gpt-report`: Skip downloading GPT engagement report
-- `--run-analysis`: Run data analysis after downloading reports
-- `--analysis-output-dir`: Directory to save analysis output (default: ./data)
+- `--workspace-id`: Workspace ID to fetch data from (default: from environment variable)
+- `--api-key`: Enterprise API key with compliance_export scope (default: from environment variable)
+- `--org-id`: Organization ID (default: from environment variable)
+- `--output-dir`: Directory to save raw data (default: ./reports)
+- `--debug`: Enable detailed debug logging for verification
+- `--page-size`: Number of items to request per API page (default: 200, max: 200)
+
+### process_engagement
+A command-line tool that processes raw data into engagement metrics.
+
+```bash
+process_engagement [--input-file FILE] [--input-dir DIRECTORY] [--output-dir DIRECTORY] [--start-date DATE] [--end-date DATE] [--weekly-chunks]
+```
+
+Options:
+- `--input-file`: Path to raw data pickle file to process
+- `--input-dir`: Directory to search for raw data files (default: ./reports)
+- `--output-dir`: Directory to save processed reports (default: ./reports)
+- `--start-date`: Start date for reports (YYYY-MM-DD, default: earliest observed date)
+- `--end-date`: End date for reports (YYYY-MM-DD, default: most recent observed date)
+- `--weekly-chunks`: Process data in weekly chunks instead of the full date range
 
 ### user_trends
 A command-line tool that provides analysis of ChatGPT user trends. It generates trend graphs (PNG files) in the data directory.
@@ -100,7 +112,7 @@ Obtain the latest ChatGPT usage reports from OpenAI:
 - Save the user engagement files (prefixed with "proofpoint_user_engagement") to the `rawdata` directory
 - Save the GPT engagement files (prefixed with "proofpoint_gpt_engagement") to the `rawdata` directory
 
-Alternatively, you can use the `get_usage_data` command to fetch these reports directly via the Enterprise Compliance API.
+Alternatively, you can use the `fetch_raw_data` command to fetch these reports directly via the Enterprise Compliance API.
 
 ### 2. Active Directory Export
 To resolve user names and email addresses:
