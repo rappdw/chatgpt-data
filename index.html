@@ -316,9 +316,6 @@
         <div class="logo-container">
             <h1>ChatGPT Enterprise Engagement Metrics</h1>
         </div>
-        <div class="button-container">
-            <button id="generate-button" class="action-button">Generate</button>
-        </div>
     </header>
 
     <div class="container">
@@ -1149,42 +1146,6 @@
                     
                     console.log('User-Manager mapping built:', userManagerMap);
                 }
-            }
-
-            // Add event listener for the Generate button
-            const generateButton = document.getElementById('generate-button');
-            if (generateButton) {
-                generateButton.addEventListener('click', async function() {
-                    try {
-                        this.disabled = true;
-                        this.textContent = 'Generating...';
-                        
-                        console.log('Running all_trends command...');
-                        const response = await fetch('/run-command', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({ command: 'all_trends' }),
-                        });
-                        
-                        if (!response.ok) {
-                            throw new Error(`Command failed: ${response.status} ${response.statusText}`);
-                        }
-                        
-                        const result = await response.json();
-                        console.log('Command result:', result);
-                        
-                        // Refresh the page to show new data
-                        window.location.reload();
-                    } catch (error) {
-                        console.error('Error running command:', error);
-                        alert('Error generating trends: ' + error.message);
-                    } finally {
-                        this.disabled = false;
-                        this.textContent = 'Generate';
-                    }
-                });
             }
         });
     </script>
