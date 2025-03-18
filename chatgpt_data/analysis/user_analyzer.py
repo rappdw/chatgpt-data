@@ -305,7 +305,7 @@ Log scale helps visualize the distribution when there are large differences in f
             # First try with all identifiers
             engagement_df = (
                 valid_data
-                .groupby(["account_id", "public_id", "name", "email"])
+                .groupby(["public_id", "name", "email"])
                 .agg({
                     "messages": "mean",
                     "period_start": "min",

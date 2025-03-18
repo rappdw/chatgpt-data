@@ -54,35 +54,8 @@ Options:
 - `--end-date`: End date for reports (YYYY-MM-DD, default: most recent observed date)
 - `--weekly-chunks`: Process data in weekly chunks instead of the full date range
 
-### user_trends
-A command-line tool that provides analysis of ChatGPT user trends. It generates trend graphs (PNG files) in the data directory.
-
-```bash
-user_trends [--data-dir DIRECTORY] [--output-dir DIRECTORY] [--engagement-report] [--non-engaged-report] [--high-threshold N] [--low-threshold N] [--latest-period-only]
-```
-
-Options:
-- `--data-dir`: Directory containing the raw data files (default: ./rawdata)
-- `--output-dir`: Directory to save the output files (default: ./data)
-- `--engagement-report`: Generate a report of user engagement levels based on average message count
-- `--non-engaged-report`: Generate a report of users who have never engaged
-- `--high-threshold`: Minimum average number of messages to be considered highly engaged (default: 20)
-- `--low-threshold`: Maximum average number of messages to be considered low engaged (default: 5)
-- `--latest-period-only`: For non-engaged report, only consider the latest period instead of all periods
-
-### gpt_trends
-A command-line tool that provides analysis of ChatGPT custom GPT trends. It generates trend graphs (PNG files) in the data directory.
-
-```bash
-gpt_trends [--data-dir DIRECTORY] [--output-dir DIRECTORY]
-```
-
-Options:
-- `--data-dir`: Directory containing the raw data files (default: ./rawdata)
-- `--output-dir`: Directory to save the output files (default: ./data)
-
 ### all_trends
-A comprehensive command-line tool that runs both user and GPT analyses in one go. It generates all trend graphs and reports in the data directory.
+A comprehensive command-line tool that provides analysis of both ChatGPT user and GPT engagement trends. It generates trend graphs and detailed reports to help understand usage patterns.
 
 ```bash
 all_trends [--data-dir DIRECTORY] [--output-dir DIRECTORY] [--skip-user-trends] [--skip-gpt-trends] [--skip-engagement-report] [--skip-non-engaged-report] [--only-message-histogram] [--histogram-bins N] [--histogram-max N] [--latest-period-only] [--high-threshold N] [--low-threshold N]
