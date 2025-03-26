@@ -1,0 +1,56 @@
+name: Build and Deploy to AWS Fargate
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'data/**'
+      - 'index.html'
+      - 'server.py'
+      - 'Dockerfile'
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v3
+      
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+        
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+    
+    - name: Build, tag, and push image to Amazon ECR
+      id: build-image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: chatgpt-dashboard
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        echo "image_uri=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+    
+    - name: Deploy to AWS CloudFormation
+      uses: aws-actions/aws-cloudformation-github-deploy@v1
+      with:
+        name: chatgpt-dashboard-stack
+        template: cloudformation-fargate.yml
+        parameter-overrides: >-
+          VpcId=${{ secrets.AWS_VPC_ID }},
+          SubnetIds=${{ secrets.AWS_SUBNET_IDS }},
+          ECRImageURI=${{ steps.build-image.outputs.image_uri }},
+          CorporateIpRanges=${{ secrets.CORPORATE_IP_RANGES }}
+        no-fail-on-empty-changeset: "1"
+        capabilities: CAPABILITY_NAMED_IAM

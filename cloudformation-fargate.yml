@@ -1,0 +1,175 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'ChatGPT Enterprise Engagement Metrics Dashboard - Fargate Deployment'
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC where the service will be deployed
+  
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Subnets where the service will be deployed (at least two in different AZs for HA)
+  
+  ECRImageURI:
+    Type: String
+    Description: URI of the ECR image (account-id.dkr.ecr.region.amazonaws.com/chatgpt-dashboard:latest)
+  
+  CorporateIpRanges:
+    Type: CommaDelimitedList
+    Description: Comma-delimited list of corporate IP CIDR ranges for access control (e.g., 10.0.0.0/8,172.16.0.0/12)
+    Default: 0.0.0.0/0
+  
+  ContainerPort:
+    Type: Number
+    Default: 8000
+    Description: Port exposed by the container
+  
+Resources:
+  # ECS Cluster
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: ChatGPTDashboardCluster
+  
+  # Log Group
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs/chatgpt-dashboard
+      RetentionInDays: 30
+  
+  # ECS Task Execution Role
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+  
+  # Security Group for the Fargate service
+  ServiceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for ChatGPT Dashboard service
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - CidrIp: !Select [0, !Ref CorporateIpRanges]
+          IpProtocol: tcp
+          FromPort: !Ref ContainerPort
+          ToPort: !Ref ContainerPort
+          Description: Allow HTTP access from corporate networks
+  
+  # Security Group for the ALB
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for ChatGPT Dashboard ALB
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - CidrIp: !Select [0, !Ref CorporateIpRanges]
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          Description: Allow HTTP access from corporate networks
+        - CidrIp: !Select [0, !Ref CorporateIpRanges]
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          Description: Allow HTTPS access from corporate networks
+  
+  # ALB Target Group
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      Port: !Ref ContainerPort
+      Protocol: HTTP
+      TargetType: ip
+      VpcId: !Ref VpcId
+  
+  # Application Load Balancer
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internet-facing
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Subnets: !Ref SubnetIds
+      Type: application
+  
+  # HTTP Listener
+  HTTPListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+  
+  # Task Definition
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: chatgpt-dashboard
+      Cpu: '256'
+      Memory: '512'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+      ContainerDefinitions:
+        - Name: chatgpt-dashboard
+          Image: !Ref ECRImageURI
+          Essential: true
+          PortMappings:
+            - ContainerPort: !Ref ContainerPort
+              HostPort: !Ref ContainerPort
+              Protocol: tcp
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+  
+  # ECS Service
+  ECSService:
+    Type: AWS::ECS::Service
+    DependsOn: HTTPListener
+    Properties:
+      Cluster: !Ref ECSCluster
+      DesiredCount: 1
+      LaunchType: FARGATE
+      TaskDefinition: !Ref TaskDefinition
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups:
+            - !Ref ServiceSecurityGroup
+          Subnets: !Ref SubnetIds
+      LoadBalancers:
+        - ContainerName: chatgpt-dashboard
+          ContainerPort: !Ref ContainerPort
+          TargetGroupArn: !Ref TargetGroup
+
+Outputs:
+  DashboardURL:
+    Description: URL of the ChatGPT Dashboard
+    Value: !Join ['', ['http://', !GetAtt ApplicationLoadBalancer.DNSName]]
+  
+  ClusterName:
+    Description: Name of the ECS cluster
+    Value: !Ref ECSCluster
+  
+  ServiceName:
+    Description: Name of the ECS service
+    Value: !Ref ECSService

@@ -123,10 +123,14 @@ class EnterpriseComplianceAPI:
             "OpenAI-Organization": self.org_id
         }
         
+        # Create failed requests log file
+        self.failed_requests_log = self.output_dir / "failed_api_requests.log"
+        
         logger.info(f"Initialized Enterprise Compliance API client for workspace: {self.workspace_id}")
         logger.info(f"Output directory: {self.output_dir}")
         logger.info(f"Page size: {self.page_size}")
         logger.info(f"Mock data fallback: {'Enabled' if self.allow_mock_data else 'Disabled'}")
+        logger.info(f"Failed requests log: {self.failed_requests_log}")
         
         # Check if we're in test mode
         if api_key == "test_api_key" or api_key.startswith("test_"):
@@ -157,105 +161,98 @@ class EnterpriseComplianceAPI:
 
         Raises:
             Exception: If the API request fails after retries
-            SystemExit: If server errors persist after 3 retries
         """
-        url = urljoin(self.BASE_URL, endpoint)
+        import requests
+        
+        url = f"{self.BASE_URL}{endpoint}"
         max_retries = 3
         
         try:
+            logger.debug(f"Making API request: {method} {url}")
+            
+            # Make the request
             response = requests.request(
-                method, 
-                url, 
-                headers=self.headers, 
-                params=params, 
-                json=json_data, 
+                method=method,
+                url=url,
+                headers=self.headers,
+                params=params,
+                json=json_data,
                 timeout=timeout
             )
             
-            # Check for 404 errors on GPT and Project endpoints
-            if response.status_code == 404:
-                # Check if this is a GPT or project endpoint
-                if '/gpts/' in endpoint or '/projects/' in endpoint:
-                    resource_type = "GPT" if '/gpts/' in endpoint else "Project"
-                    resource_id = endpoint.split('/')[-1].split('?')[0]  # Extract ID from the endpoint
-                    # Log the missing resource instead of raising an exception
-                    api_consistency_logger.warning(f"Missing {resource_type}: {resource_id} not found in workspace {self.workspace_id}")
-                    # Return a standardized response for missing resources
-                    return {"detail": f"{resource_type} not found"}
-            
-            # Raise an exception for other 4XX/5XX status codes
-            response.raise_for_status()
-            
-            return response.json()
-        except requests.exceptions.HTTPError as e:
-            # Handle HTTP errors (4xx, 5xx)
-            # We no longer need to handle simplified 404 errors here since we catch them earlier
-                
-            # Handle 400 Bad Request errors for invalid IDs
-            if e.response.status_code == 400:
-                response_text = e.response.text if hasattr(e.response, 'text') else ""
-                
-                # Check if this is an invalid GPT or project ID error
-                if "Invalid gpt_id" in response_text and "/gpts/" in endpoint:
-                    gpt_id = endpoint.split('/gpts/')[-1].split('/')[0]
-                    logger.warning(f"Invalid GPT ID format: {gpt_id}")
-                    raise requests.exceptions.HTTPError(f"GPT not found", response=e.response)
-                    
-                elif "Invalid project_id" in response_text and "/projects/" in endpoint:
-                    project_id = endpoint.split('/projects/')[-1].split('/')[0]
-                    logger.warning(f"Invalid project ID format: {project_id}")
-                    raise requests.exceptions.HTTPError(f"Project not found", response=e.response)
-            
-            # Check if this is a server error (5xx) that should be retried
-            is_server_error = e.response.status_code >= 500
-            
-            # For other errors, provide detailed information
-            error_message = f"HTTP Error: {e}"
-            
-            # Try to get more detailed error information from the response
+            # Check for HTTP errors
             try:
-                error_content = e.response.json()
-                if "error" in error_content and isinstance(error_content["error"], dict):
-                    if "message" in error_content["error"]:
-                        error_message += f"\nError message: {error_content['error']['message']}"
-                    if "type" in error_content["error"]:
-                        error_message += f"\nError type: {error_content['error']['type']}"
-                else:
-                    error_message += f"\nResponse: {error_content}"
-            except:
-                # If we can't parse the JSON, just include the text
-                if hasattr(e.response, 'text') and e.response.text:
-                    error_message += f"\nResponse text: {e.response.text[:200]}..."
-            
-            logger.error(error_message)
-            
-            # Include request details in the error message
-            if params:
-                logger.debug(f"Request parameters: {params}")
-            if json_data:
-                logger.debug(f"JSON Data: {json_data}")
-            
-            # Handle retry logic for server errors
-            if is_server_error and _retry_count < max_retries:
-                _retry_count += 1
-                retry_delay = 2 ** _retry_count  # Exponential backoff: 2, 4, 8 seconds
-                logger.warning(f"Server error encountered. Retrying in {retry_delay} seconds... (Attempt {_retry_count}/{max_retries})")
-                import time
-                time.sleep(retry_delay)
-                return self._make_request(
-                    endpoint=endpoint,
-                    method=method,
-                    params=params,
-                    json_data=json_data,
-                    timeout=timeout,
-                    _retry_count=_retry_count
-                )
-            elif is_server_error and _retry_count >= max_retries:
-                logger.error(f"Server error persisted after {max_retries} retry attempts. Exiting program.")
-                import sys
-                sys.exit(1)  # Exit with error code 1
+                response.raise_for_status()
+            except requests.exceptions.HTTPError as e:
+                # Extract status code and error message
+                status_code = e.response.status_code
                 
-            raise Exception(f"API request failed: {error_message}")
+                try:
+                    error_data = e.response.json()
+                    error_message = error_data.get("error", {}).get("message", str(e))
+                except ValueError:
+                    # If the response is not JSON, use the text
+                    error_message = e.response.text or str(e)
+                
+                # Simplified error message for specific cases
+                if status_code == 404:
+                    if "gpt" in endpoint:
+                        error_message = "GPT not found"
+                    elif "project" in endpoint:
+                        error_message = "Project not found"
+                
+                # Check if this is a server error (5xx)
+                is_server_error = 500 <= status_code < 600
+                
+                logger.error(f"HTTP Error {status_code}: {error_message}")
+                logger.error(f"URL: {url}")
+                
+                # Include request details in the error message
+                if params:
+                    logger.debug(f"Request parameters: {params}")
+                if json_data:
+                    logger.debug(f"JSON Data: {json_data}")
+                
+                # Handle retry logic for server errors
+                if is_server_error and _retry_count < max_retries:
+                    _retry_count += 1
+                    retry_delay = 2 ** _retry_count  # Exponential backoff: 2, 4, 8 seconds
+                    logger.warning(f"Server error encountered. Retrying in {retry_delay} seconds... (Attempt {_retry_count}/{max_retries})")
+                    import time
+                    time.sleep(retry_delay)
+                    return self._make_request(
+                        endpoint=endpoint,
+                        method=method,
+                        params=params,
+                        json_data=json_data,
+                        timeout=timeout,
+                        _retry_count=_retry_count
+                    )
+                elif is_server_error and _retry_count >= max_retries:
+                    error_msg = f"Server error persisted after {max_retries} retry attempts."
+                    logger.error(error_msg)
+                    
+                    # Extract item ID from endpoint for logging
+                    item_id = endpoint.split('/')[-1] if '/' in endpoint else 'unknown'
+                    request_type = "Unknown"
+                    if "gpts" in endpoint:
+                        request_type = "GPT"
+                    elif "projects" in endpoint:
+                        request_type = "Project"
+                    elif "conversations" in endpoint:
+                        request_type = "Conversation"
+                    
+                    # Log the failed request
+                    self._log_failed_request(request_type, item_id, error_msg)
+                    
+                    # Raise exception instead of exiting
+                    raise Exception(f"API request failed: {error_message}")
+                
+                raise Exception(f"API request failed: {error_message}")
+            
+            # Parse and return the JSON response
+            return response.json()
+            
         except requests.exceptions.Timeout:
             logger.error(f"Request timed out after {timeout} seconds")
             logger.error(f"URL: {url}")
@@ -277,9 +274,24 @@ class EnterpriseComplianceAPI:
                     _retry_count=_retry_count
                 )
             elif _retry_count >= max_retries:
-                logger.error(f"Request timeout persisted after {max_retries} retry attempts. Exiting program.")
-                import sys
-                sys.exit(1)  # Exit with error code 1
+                error_msg = f"Request timeout persisted after {max_retries} retry attempts."
+                logger.error(error_msg)
+                
+                # Extract item ID from endpoint for logging
+                item_id = endpoint.split('/')[-1] if '/' in endpoint else 'unknown'
+                request_type = "Unknown"
+                if "gpts" in endpoint:
+                    request_type = "GPT"
+                elif "projects" in endpoint:
+                    request_type = "Project"
+                elif "conversations" in endpoint:
+                    request_type = "Conversation"
+                
+                # Log the failed request
+                self._log_failed_request(request_type, item_id, error_msg)
+                
+                # Raise exception instead of exiting
+                raise Exception(f"Request timed out after {timeout} seconds")
                 
             raise Exception(f"Request timed out after {timeout} seconds")
         except requests.exceptions.RequestException as e:
@@ -303,9 +315,24 @@ class EnterpriseComplianceAPI:
                     _retry_count=_retry_count
                 )
             elif _retry_count >= max_retries:
-                logger.error(f"Request error persisted after {max_retries} retry attempts. Exiting program.")
-                import sys
-                sys.exit(1)  # Exit with error code 1
+                error_msg = f"Request error persisted after {max_retries} retry attempts."
+                logger.error(error_msg)
+                
+                # Extract item ID from endpoint for logging
+                item_id = endpoint.split('/')[-1] if '/' in endpoint else 'unknown'
+                request_type = "Unknown"
+                if "gpts" in endpoint:
+                    request_type = "GPT"
+                elif "projects" in endpoint:
+                    request_type = "Project"
+                elif "conversations" in endpoint:
+                    request_type = "Conversation"
+                
+                # Log the failed request
+                self._log_failed_request(request_type, item_id, error_msg)
+                
+                # Raise exception instead of exiting
+                raise Exception(f"Request failed: {str(e)}")
                 
             raise Exception(f"Request failed: {str(e)}")
     
@@ -538,6 +565,28 @@ class EnterpriseComplianceAPI:
                                 )
                                 message["created_at"] = conv_last_active_at
     
+    def _log_failed_request(self, request_type: str, item_id: str, error_message: str) -> None:
+        """Log a failed request to the failure log file.
+        
+        Args:
+            request_type: Type of request (e.g., 'GPT', 'Conversation', 'Message')
+            item_id: ID of the item that failed to be retrieved
+            error_message: Error message describing the failure
+        """
+        timestamp = datetime.now().isoformat()
+        log_entry = {
+            "timestamp": timestamp,
+            "workspace_id": self.workspace_id,
+            "request_type": request_type,
+            "item_id": item_id,
+            "error": error_message
+        }
+        
+        with open(self.failed_requests_log, "a") as f:
+            f.write(json.dumps(log_entry) + "\n")
+            
+        logger.warning(f"Logged failed {request_type} request for ID {item_id} to {self.failed_requests_log}")
+    
     def list_conversations(
         self, 
         since_timestamp: int = 0,
@@ -668,6 +717,46 @@ class EnterpriseComplianceAPI:
                 # If mock data is not allowed, raise the exception
                 raise Exception(f"Conversations endpoint failed: {str(e)}")
     
+    def get_failed_requests_summary(self) -> Dict[str, int]:
+        """Get a summary of failed requests from the log file.
+        
+        Returns:
+            Dictionary with counts of failed requests by type.
+        """
+        if not self.failed_requests_log.exists():
+            return {}
+            
+        failed_requests = {
+            "GPT": 0,
+            "Project": 0,
+            "Conversation": 0,
+            "Message": 0,
+            "Other": 0,
+            "Total": 0
+        }
+        
+        try:
+            with open(self.failed_requests_log, "r") as f:
+                for line in f:
+                    try:
+                        entry = json.loads(line.strip())
+                        request_type = entry.get("request_type", "Other")
+                        
+                        if request_type in failed_requests:
+                            failed_requests[request_type] += 1
+                        else:
+                            failed_requests["Other"] += 1
+                            
+                        failed_requests["Total"] += 1
+                    except json.JSONDecodeError:
+                        # Skip malformed lines
+                        continue
+                        
+            return failed_requests
+        except Exception as e:
+            logger.error(f"Error reading failed requests log: {str(e)}")
+            return failed_requests
+
     def process_all_conversations(
         self, 
         callback_fn: callable,
@@ -691,6 +780,7 @@ class EnterpriseComplianceAPI:
             file_format: Format for files in conversations ('url' or 'id')
             max_retries: Maximum number of retries for failed API requests
             debug_logging: Whether to print detailed debug logs
+            use_tqdm: Whether to show a progress bar
             
         Returns:
             Total number of conversations processed
@@ -725,7 +815,12 @@ class EnterpriseComplianceAPI:
             # Create progress bar if requested
             pbar = None
             if use_tqdm:
-                pbar = tqdm(desc="Processing conversations", unit="conv")
+                try:
+                    from tqdm import tqdm
+                    pbar = tqdm(desc="Processing conversations", unit="conv")
+                except ImportError:
+                    logger.warning("tqdm package not installed, progress bar disabled")
+                    use_tqdm = False
             
             # Process first page conversations
             for conversation in first_page_conversations:
@@ -753,6 +848,9 @@ class EnterpriseComplianceAPI:
                     import traceback
                     logger.error(traceback.format_exc())
                     logger.error(f"Error processing conversation {conversation_id}: {str(e)}")
+                    
+                    # Log the failed request
+                    self._log_failed_request("Conversation", conversation_id, str(e))
             
             # Check if we need to fetch more pages
             has_more = first_response.get("has_more", False)
@@ -806,6 +904,9 @@ class EnterpriseComplianceAPI:
                         import traceback
                         logger.error(traceback.format_exc())
                         logger.error(f"Error processing conversation {conversation_id}: {str(e)}")
+                        
+                        # Log the failed request
+                        self._log_failed_request("Conversation", conversation_id, str(e))
                 
                 # Check if we need to fetch more pages
                 has_more = response.get("has_more", False)
@@ -824,6 +925,10 @@ class EnterpriseComplianceAPI:
                     continue
                 else:
                     logger.warning(f"Max retries ({max_retries}) exceeded, skipping to next page")
+                    # Log the failed request for the entire page
+                    page_id = after or "unknown"
+                    self._log_failed_request("ConversationPage", page_id, str(e))
+                    
                     # If we've reached max retries, try to continue with the next page if possible
                     if after:
                         logger.info(f"Continuing from last known ID: {after}")
@@ -834,6 +939,11 @@ class EnterpriseComplianceAPI:
         
         if debug_logging:
             logger.info(f"Processed {processed_count} conversations across {page_count} pages")
+            
+            # Print summary of failed requests
+            failed_requests = self.get_failed_requests_summary()
+            if failed_requests.get("Total", 0) > 0:
+                logger.info(f"Failed requests summary: {failed_requests}")
         
         # Close progress bar
         if 'pbar' in locals() and pbar is not None:
@@ -841,14 +951,15 @@ class EnterpriseComplianceAPI:
             
         return processed_count
     
-    def get_gpt(self, gpt_id: str) -> GPT:
+    def get_gpt(self, gpt_id: str) -> Optional[GPT]:
         """Get the builder name of a GPT by its ID.
         
         Args:
             gpt_id: The ID of the GPT
             
         Returns:
-            The builder name of the GPT, or "External or Deleted" if not found
+            The builder name of the GPT, or "External or Deleted" if not found.
+            Returns None if the request fails after max retries.
         """
         try:
             # Make the API request to get GPT configurations
@@ -879,118 +990,65 @@ class EnterpriseComplianceAPI:
             )
         
             return gpt            
-
-        except requests.exceptions.HTTPError as e:
-            gpt = GPT(
-                id=gpt_id,
-                name="External or Deleted",
-                description="",
-                created_at=0,
-                creator_id="",
-                creator_email="",
-            )
-            # If this is our simplified 404 error or a 400 with 'Invalid gpt_id', log and return default GPT
-            if str(e).startswith("GPT not found") or (
-                e.response.status_code == 400 and 
-                "Invalid gpt_id" in e.response.text
-            ):
-                # Log the missing GPT to the consistency issues log
-                api_consistency_logger.warning(f"Missing GPT: {gpt_id} not found in workspace {self.workspace_id}")
-                return gpt
-            
-            # For other errors, log and handle as before
-            error_msg = str(e)
-            api_consistency_logger.error(f"API request failed when fetching GPT details for {gpt_id}: {error_msg}")
+        except Exception as e:
+            logger.error(f"Failed to get GPT {gpt_id}: {str(e)}")
+            self._log_failed_request("GPT", gpt_id, str(e))
             
             if self.allow_mock_data:
-                api_consistency_logger.info(f"Using mock GPT data for {gpt_id}")
+                logger.info(f"Using mock data for GPT {gpt_id}")
                 return GPT(
                     id=gpt_id,
-                    name=f"Mock GPT {gpt_id}",
-                    description="",
-                    created_at=0,
-                    creator_id="",
-                    creator_email="",
+                    name=f"Mock GPT {gpt_id[:8]}",
+                    description="This is a mock GPT created when the API request failed",
+                    created_at=int(datetime.now().timestamp()),
+                    creator_id="unknown",
+                    creator_email="unknown@example.com",
                 )
-            else:
-                # If mock data is not allowed, return "External or Deleted"
-                return gpt
+            return None
     
-    def get_project(self, project_id: str) -> Project:
+    def get_project(self, project_id: str) -> Optional[Project]:
         """Get the builder name of a project by its ID.
         
         Args:
             project_id: The ID of the project
             
         Returns:
-            The builder name of the project, or "External or Deleted" if not found
+            The builder name of the project, or "External or Deleted" if not found.
+            Returns None if the request fails after max retries.
         """
         try:
             # Make the API request to get project configurations
             endpoint = f"compliance/workspaces/{self.workspace_id}/projects/{project_id}"
             response = self._make_request(
                 endpoint=endpoint,
-                method="GET",
+                method="GET"
             )
-
-            # Safely get the config data with proper error handling
-            config_data = response.get("latest_config", {}).get("data", [])
             
-            # Check if config_data is a non-empty list before accessing index 0
-            if config_data and len(config_data) > 0:
-                config = config_data[0]
-            else:
-                # Log the issue and use a default config
-                api_consistency_logger.warning(f"Missing config data for Project: {project_id} in workspace {self.workspace_id}")
-                config = {}
-                
             project = Project(
                 id=project_id,
-                name=config.get("name", project_id),
-                description=config.get("description", ""),
+                name=response.get("name", project_id),
+                description=response.get("description", ""),
                 created_at=response.get("created_at", 0),
-                creator_id=response.get("owner_id", ""),
-                creator_email=response.get("owner_email", ""),
+                creator_id=response.get("creator_id", ""),
+                creator_email=response.get("creator_email", ""),
             )
-
+            
             return project
-            
-        except requests.exceptions.HTTPError as e:
-            project = Project(
-                id=project_id,
-                name="External or Deleted",
-                description="",
-                created_at=0,
-                creator_id="",
-                creator_email="",
-            )
-            
-            # If this is our simplified 404 error or a 400 with 'Invalid project_id', log and return default project
-            if str(e).startswith("Project not found") or (
-                e.response.status_code == 400 and 
-                "Invalid project_id" in e.response.text
-            ):
-                # Log the missing project to the consistency issues log
-                api_consistency_logger.warning(f"Missing Project: {project_id} not found in workspace {self.workspace_id}")
-                return project
-            
-            # For other errors, log and handle as before
-            error_msg = str(e)
-            api_consistency_logger.error(f"API request failed when fetching project details for {project_id}: {error_msg}")
+        except Exception as e:
+            logger.error(f"Failed to get Project {project_id}: {str(e)}")
+            self._log_failed_request("Project", project_id, str(e))
             
             if self.allow_mock_data:
-                api_consistency_logger.info(f"Using mock project data for {project_id}")
+                logger.info(f"Using mock data for Project {project_id}")
                 return Project(
                     id=project_id,
-                    name=f"Mock Project {project_id}",
-                    description="",
-                    created_at=0,
-                    creator_id="",
-                    creator_email="",
+                    name=f"Mock Project {project_id[:8]}",
+                    description="This is a mock Project created when the API request failed",
+                    created_at=int(datetime.now().timestamp()),
+                    creator_id="unknown",
+                    creator_email="unknown@example.com",
                 )
-            else:
-                # If mock data is not allowed, return "External or Deleted"
-                return project
+            return None
 
     def _extract_message_text(self, message: Dict[str, Any]) -> str:
         """Extract text content from a message.
@@ -1012,7 +1070,7 @@ class EnterpriseComplianceAPI:
         # For other content types or if text extraction fails
         return ""
         
-    def delete_conversation(self, conversation_id: str) -> None:
+    def delete_conversation(self, conversation_id: str) -> bool:
         """Delete a conversation from the workspace.
         
         This method deletes a conversation from the workspace according to the OpenAPI spec.
@@ -1021,8 +1079,8 @@ class EnterpriseComplianceAPI:
         Args:
             conversation_id: The ID of the conversation to delete
             
-        Raises:
-            Exception: If the API request fails and mock data is not allowed
+        Returns:
+            True if deletion was successful, False otherwise
         """
         try:
             # Make the API request to delete the conversation
@@ -1033,12 +1091,13 @@ class EnterpriseComplianceAPI:
             )
             
             logger.info(f"Successfully deleted conversation: {conversation_id}")
+            return True
             
         except Exception as e:
-            logger.error(f"API request failed when deleting conversation: {str(e)}")
+            logger.error(f"Failed to delete conversation {conversation_id}: {str(e)}")
+            self._log_failed_request("ConversationDelete", conversation_id, str(e))
             
             if self.allow_mock_data:
                 logger.info(f"Mock deletion of conversation: {conversation_id}")
-            else:
-                # If mock data is not allowed, raise the exception
-                raise Exception(f"Delete conversation endpoint failed: {str(e)}")
+                return True
+            return False

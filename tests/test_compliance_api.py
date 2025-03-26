@@ -350,10 +350,14 @@ def test_retry_mechanism_for_server_errors(mock_exit, mock_sleep, mock_request):
     )
     
     # Call a method that uses _make_request
+    exception_raised = False
     try:
         api.list_conversations()
     except Exception:
-        pass  # We expect an exception or sys.exit
+        exception_raised = True  # We now expect an exception instead of sys.exit
+    
+    # Verify an exception was raised after max retries
+    assert exception_raised, "Expected an exception to be raised after max retries"
     
     # Verify that request was called 4 times (original + 3 retries)
     assert mock_request.call_count == 4
@@ -366,8 +370,49 @@ def test_retry_mechanism_for_server_errors(mock_exit, mock_sleep, mock_request):
     mock_sleep.assert_any_call(4)  # Second retry
     mock_sleep.assert_any_call(8)  # Third retry
     
-    # Verify that sys.exit was called after max retries
-    mock_exit.assert_called_once_with(1)
+    # Verify that sys.exit was NOT called (our new implementation raises an exception instead)
+    mock_exit.assert_not_called()
+
+
+@patch('requests.request')
+@patch('time.sleep')  # Mock sleep to avoid waiting during tests
+@patch('sys.exit')    # Mock sys.exit to prevent test from exiting
+def test_retry_mechanism_for_timeout_errors(mock_exit, mock_sleep, mock_request):
+    """Test that the retry mechanism works correctly for timeout errors."""
+    # Make the request method raise a Timeout exception
+    mock_request.side_effect = requests.exceptions.Timeout("Request timed out")
+    
+    # Create an API client
+    api = EnterpriseComplianceAPI(
+        api_key="test-api-key",
+        org_id="test-org-id",
+        workspace_id="test-workspace",
+        allow_mock_data=False
+    )
+    
+    # Call a method that uses _make_request
+    exception_raised = False
+    try:
+        api.list_conversations()
+    except Exception:
+        exception_raised = True  # We now expect an exception instead of sys.exit
+    
+    # Verify an exception was raised after max retries
+    assert exception_raised, "Expected an exception to be raised after max retries"
+    
+    # Verify that request was called 4 times (original + 3 retries)
+    assert mock_request.call_count == 4
+    
+    # Verify that sleep was called three times (once after each of the first 3 failures)
+    assert mock_sleep.call_count == 3
+    
+    # Verify that sleep was called with exponential backoff (2^1=2, 2^2=4, 2^3=8)
+    mock_sleep.assert_any_call(2)  # First retry
+    mock_sleep.assert_any_call(4)  # Second retry
+    mock_sleep.assert_any_call(8)  # Third retry
+    
+    # Verify that sys.exit was NOT called (our new implementation raises an exception instead)
+    mock_exit.assert_not_called()
 
 
 @patch('requests.request')
@@ -479,40 +524,3 @@ def test_message_timestamps_within_conversation_range():
                     f"Message {message['id']} has timestamp before conversation creation: {msg_created_at} < {conv_created_at}"
                 assert msg_created_at <= conv_last_active_at, \
                     f"Message {message['id']} has timestamp after conversation last activity: {msg_created_at} > {conv_last_active_at}"
-
-
-@patch('requests.request')
-@patch('time.sleep')  # Mock sleep to avoid waiting during tests
-@patch('sys.exit')   # Mock sys.exit to prevent test from exiting
-def test_retry_mechanism_for_timeout_errors(mock_exit, mock_sleep, mock_request):
-    """Test that the retry mechanism works correctly for timeout errors."""
-    # Make the request method raise a Timeout exception
-    mock_request.side_effect = requests.exceptions.Timeout("Request timed out")
-    
-    # Create an API client
-    api = EnterpriseComplianceAPI(
-        api_key="test-api-key",
-        org_id="test-org-id",
-        workspace_id="test-workspace",
-        allow_mock_data=False
-    )
-    
-    # Call a method that uses _make_request
-    try:
-        api.list_conversations()
-    except Exception:
-        pass  # We expect an exception or sys.exit
-    
-    # Verify that request was called 4 times (original + 3 retries)
-    assert mock_request.call_count == 4
-    
-    # Verify that sleep was called three times (once after each of the first 3 failures)
-    assert mock_sleep.call_count == 3
-    
-    # Verify that sleep was called with exponential backoff (2^1=2, 2^2=4, 2^3=8)
-    mock_sleep.assert_any_call(2)  # First retry
-    mock_sleep.assert_any_call(4)  # Second retry
-    mock_sleep.assert_any_call(8)  # Third retry
-    
-    # Verify that sys.exit was called after max retries
-    mock_exit.assert_called_once_with(1)
