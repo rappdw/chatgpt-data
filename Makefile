@@ -49,3 +49,6 @@ create-ecr-repository: ecr-login
             Key=owner_email,Value="bwinterton@proofpoint.com" \
             Key=data_classification,Value=Internal\
     )
+
+ecr-login:
+	aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(ECR_PREFIX)
