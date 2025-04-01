@@ -20,6 +20,10 @@ RUN apt-get update && apt-get install -y curl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
 # Set ownership to non-root user
 RUN chown -R appuser:appuser /app
 
@@ -31,10 +35,6 @@ EXPOSE 8000
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
-
-# Install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy only the files needed for the web server
 COPY server.py .
