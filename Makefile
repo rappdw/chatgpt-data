@@ -17,18 +17,18 @@ pipeline-build-version:
 pipeline-post-build:
 	@echo "Running pipeline post-build"
 
-.PHONY: s3-copy
-s3-copy:
-	aws s3 cp s3://$(S3_BUCKET)/data/ data/ --recursive
-
 .PHONY: pipeline-build
 pipeline-build: pipeline-docker-build create-ecr-repository
 	docker tag chatgpt-data:latest $(ECR_PREFIX)/chatgpt-data:$(CI_BUILD_VERSION)
 	docker push $(ECR_PREFIX)/chatgpt-data:$(CI_BUILD_VERSION)
 
 .PHONY: pipeline-docker-build
-pipeline-docker-build: s3-copy
-	docker build -t chatgpt-data:latest -f Dockerfile .
+pipeline-docker-build:
+	docker build . -t chatgpt-data:latest -f pipeline.Dockerfile --build-arg REPOCACHE_HOST=$(ARTIFACT_REPOSITORY_HOST)
+
+.PHONY: local-docker-build
+local-docker-build:
+	docker build . -t chatgpt-data:latest -f Dockerfile
 
 # Create ECR repository if it doesn't exist
 .PHONY: create-ecr-repository
@@ -49,12 +49,3 @@ create-ecr-repository: ecr-login
             Key=owner_email,Value="bwinterton@proofpoint.com" \
             Key=data_classification,Value=Internal\
     )
-
-# Clean up
-.PHONY: clean
-clean: clean-s3-data
-
-.PHONY: clean-s3-data
-clean-s3-data:
-	@echo "Cleaning up S3 data"
-	rm -rf data

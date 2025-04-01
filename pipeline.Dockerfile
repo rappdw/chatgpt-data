@@ -1,4 +1,10 @@
 FROM python:3.10-slim
+ARG REPOCACHE_HOST
+
+COPY <<EOF /etc/pip.conf
+[global]
+index-url = https://${REPOCACHE_HOST}/artifactory/api/pypi/pypi/simple
+EOF
 
 # Set working directory
 WORKDIR /app
@@ -33,7 +39,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy only the files needed for the web server
 COPY server.py .
 COPY index.html .
-COPY data/ ./data/
 
 # Command to run the server
 CMD ["python", "server.py"]
