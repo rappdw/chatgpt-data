@@ -3,6 +3,7 @@ AWS_ACCOUNT ?= $(shell aws configure get sso_account_id)
 S3_BUCKET = chatgpt-data-dev-chatgpt-data
 
 ECR_PREFIX=$(AWS_ACCOUNT).dkr.ecr.$(AWS_REGION).amazonaws.com
+CI_BUILD_VERSION="$(shell echo "$$(git rev-parse HEAD)")"
 
 .PHONY: pipeline-pre-build
 pipeline-pre-build:
