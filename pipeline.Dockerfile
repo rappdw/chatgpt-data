@@ -10,7 +10,7 @@ EOF
 WORKDIR /app
 
 # Create a non-root user for security
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+RUN groupadd -r -g 1000 appuser && useradd -r -g appuser -u 1000appuser
 
 # Create error.html for the web server error page
 RUN echo '<!DOCTYPE html><html><head><title>Error</title></head><body><h1>Error</h1><p>The requested page could not be found.</p></body></html>' > error.html
@@ -25,7 +25,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Set ownership to non-root user
-RUN mkdir -p /app/data
 RUN chown -R appuser:appuser /app
 
 # Switch to non-root user
