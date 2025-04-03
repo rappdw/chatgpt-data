@@ -25,6 +25,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Set ownership to non-root user
+RUN mkdir -p /app/data
 RUN chown -R appuser:appuser /app
 
 # Switch to non-root user
