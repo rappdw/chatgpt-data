@@ -50,7 +50,7 @@ def sync_data_from_s3():
             for obj in page.get("Contents", []):
                 # Create the local file path
                 relative_path = obj["Key"]
-                local_path = DATA_DIR / relative_path
+                local_path = SCRIPT_DIR / relative_path
 
                 # Ensure directory exists
                 local_path.parent.mkdir(parents=True, exist_ok=True)
