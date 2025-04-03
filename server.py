@@ -46,7 +46,7 @@ def sync_data_from_s3():
     try:
         # Use aws s3 sync through boto3
         paginator = s3.get_paginator("list_objects_v2")
-        for page in paginator.paginate(Bucket=s3_bucket):
+        for page in paginator.paginate(Bucket=s3_bucket, Prefix="data/"):
             for obj in page.get("Contents", []):
                 # Create the local file path
                 relative_path = obj["Key"]
