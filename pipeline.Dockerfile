@@ -10,7 +10,7 @@ EOF
 WORKDIR /app
 
 # Create a non-root user for security
-RUN groupadd -r -g 1000 appuser && useradd -r -g appuser -u 1000appuser
+RUN groupadd -r -g 1000 appuser && useradd -r -g appuser -u 1000 appuser
 
 # Create error.html for the web server error page
 RUN echo '<!DOCTYPE html><html><head><title>Error</title></head><body><h1>Error</h1><p>The requested page could not be found.</p></body></html>' > error.html
