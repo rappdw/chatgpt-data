@@ -117,12 +117,12 @@ def main() -> int:
     data_group.add_argument(
         "--input-dir",
         default="./rawdata",
-        help="Directory to search for raw data files (default: ./reports)",
+        help="Directory to search for raw data files (default: ./rawdata)",
     )
     data_group.add_argument(
         "--output-dir",
         default="./rawdata",
-        help="Directory to save processed reports (default: ./reports)",
+        help="Directory to save processed reports (default: ./rawdata)",
     )
     data_group.add_argument(
         "--start-date",

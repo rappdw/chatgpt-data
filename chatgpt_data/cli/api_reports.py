@@ -506,8 +506,10 @@ def save_gpt_engagement_metrics_to_csv(metrics: EngagementMetrics, output_dir: s
     for gpt_id, activity in metrics.gpt_activity.items():
         # Get gpt info - handle the case when gpt might be None
         gpt = metrics.gpts.get(gpt_id)
+        if not gpt:
+            continue
         
-        # Create display name (use name if available, otherwise email)
+        # Create display name (use name if available, otherwise "unknown")
         display_name = gpt.name
         
         # Get last active timestamp
@@ -517,10 +519,6 @@ def save_gpt_engagement_metrics_to_csv(metrics: EngagementMetrics, output_dir: s
         # Get first active timestamp
         first_active_timestamp = activity.first_day_active
         first_active_str = datetime.fromtimestamp(first_active_timestamp, tz=DEFAULT_TIMEZONE).strftime("%Y-%m-%d") if first_active_timestamp else ""
-        
-        # Get created_at timestamp
-        created_at = gpt.created_at
-        created_at_str = datetime.fromtimestamp(created_at, tz=DEFAULT_TIMEZONE).strftime("%Y-%m-%d") if created_at else ""
         
         # Determine cadence based on start_date and end_date
         cadence = determine_cadence(start_date, end_date) if start_date and end_date else "unknown"
@@ -535,7 +533,7 @@ def save_gpt_engagement_metrics_to_csv(metrics: EngagementMetrics, output_dir: s
             "period_end": period_end_str,
             "account_id": account_id,
             "gpt_id": gpt_id,
-            "gpt_name": gpt.name,
+            "gpt_name": display_name,
             "gpt_description": gpt.description,
             "gpt_url": f"https://chatgpt.com/g/{gpt_id}",
             "gpt_creator": gpt.creator_id,
