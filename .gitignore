@@ -40,3 +40,7 @@ Thumbs.db
 .env
 rawdata*/
 api_consistency_issues.log
+
+# Terraform
+.terraform
+.terraform.lock.hcl

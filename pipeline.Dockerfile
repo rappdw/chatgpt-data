@@ -1,10 +1,16 @@
 FROM python:3.10-slim
+ARG REPOCACHE_HOST
+
+COPY <<EOF /etc/pip.conf
+[global]
+index-url = https://${REPOCACHE_HOST}/artifactory/api/pypi/pypi/simple
+EOF
 
 # Set working directory
 WORKDIR /app
 
 # Create a non-root user for security
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+RUN groupadd -r -g 1000 appuser && useradd -r -g appuser -u 1000 appuser
 
 # Create error.html for the web server error page
 RUN echo '<!DOCTYPE html><html><head><title>Error</title></head><body><h1>Error</h1><p>The requested page could not be found.</p></body></html>' > error.html
@@ -33,7 +39,6 @@ ENV PYTHONUNBUFFERED=1
 # Copy only the files needed for the web server
 COPY server.py .
 COPY index.html .
-COPY data/ ./data/
 
 # Command to run the server
 CMD ["python", "server.py"]
