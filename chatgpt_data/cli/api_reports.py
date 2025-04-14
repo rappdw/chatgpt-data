@@ -439,7 +439,8 @@ def save_user_engagement_metrics_to_csv(metrics: EngagementMetrics, output_dir: 
             "department": "",  # Empty string as requested
             "user_status": user.status,
             "created_or_invited_date": created_at_str,
-            "is_active": 1 if activity.user_message_count > 0 else 0,  # Only active if user has sent messages
+            "is_active": 1 if (activity.user_message_count > 0 and 
+                               activity.last_day_active >= datetime_to_unix_timestamp(end_date - timedelta(days=30))) else 0,  # Only active if user has sent messages in the last month
             "first_day_active_in_period": first_active_str,
             "last_day_active_in_period": last_active_str,
             "messages": activity.user_message_count,
@@ -538,7 +539,8 @@ def save_gpt_engagement_metrics_to_csv(metrics: EngagementMetrics, output_dir: s
             "gpt_url": f"https://chatgpt.com/g/{gpt_id}",
             "gpt_creator": gpt.creator_id,
             "gpt_creator_email": gpt.creator_email,
-            "is_active": 1 if activity.message_count > 0 else 0,  # Only active if gpt has received messages
+            "is_active": 1 if (activity.message_count > 0 and 
+                              activity.last_day_active >= datetime_to_unix_timestamp(end_date - timedelta(days=30))) else 0,  # Only active if gpt has received messages in the last month
             "first_day_active_in_period": first_active_str,
             "last_day_active_in_period": last_active_str,
             "messages_workspace": activity.message_count,
