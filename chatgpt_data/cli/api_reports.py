@@ -461,7 +461,8 @@ def find_most_recent_data(output_dir: str) -> Tuple[Optional[RawData], int]:
             raw_data = pickle.load(f)
             
         # Use the latest message timestamp as the last run timestamp
-        last_run_timestamp = raw_data.latest_message_timestamp
+        # Convert to integer timestamp (removing microsecond precision)
+        last_run_timestamp = int(raw_data.latest_message_timestamp)
         
         print(f"Successfully loaded data with {len(raw_data.users)} users.")
         print(f"Last run timestamp: {datetime.fromtimestamp(last_run_timestamp, tz=DEFAULT_TIMEZONE).strftime('%Y-%m-%d %H:%M:%S')}")
