@@ -50,7 +50,7 @@ echo "====================================================="
 
 # Step 1: Fetch raw data from the API
 echo "Step 1: Fetching raw data from Enterprise Compliance API..."
-if ! fetch_raw_data --output-dir "$DATA_DIR"; then
+if ! fetch_raw_data --incremental --output-dir "$DATA_DIR"; then
     echo "Error: Failed to fetch raw data from API"
     exit 1
 fi

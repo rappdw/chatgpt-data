@@ -28,9 +28,6 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
-# Generated data directory
-/data/
-
 # Environment variables
 .env
 
