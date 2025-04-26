@@ -41,3 +41,4 @@ api_consistency_issues.log
 # Terraform
 .terraform
 .terraform.lock.hcl
+data.incremental
