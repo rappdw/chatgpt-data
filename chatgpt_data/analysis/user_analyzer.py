@@ -28,16 +28,12 @@ class UserAnalyzer(DataAnalyzer):
         self.output_dir = Path(output_dir)
         
         # Initialize loaders and utilities
-        self.data_loader = UserDataLoader(data_dir)
+        # UserDataLoader will load and cache all data during initialization
+        self.data_loader = UserDataLoader(data_dir, load_all=True)
         self.visualizer = Visualizer(output_dir)
         
-        # Load data
-        self.user_data = self.data_loader.load_user_data()
-        self.ad_data = self.data_loader.load_ad_data()
-        self.management_chains = self.data_loader.load_management_chains()
-        
         # Initialize name matcher if management chains are available
-        self.name_matcher = NameMatcher(self.management_chains)
+        self.name_matcher = NameMatcher(self.data_loader.get_management_chains())
     
     def resolve_user_name_from_ad(self, email: str) -> str:
         """Resolve a user's display name from their email using AD data.
@@ -48,21 +44,8 @@ class UserAnalyzer(DataAnalyzer):
         Returns:
             Display name from AD if found, otherwise the original email
         """
-        if self.ad_data is None or email is None or pd.isna(email) or email == "":
-            return email
-            
-        # Try to match on userPrincipalName first
-        match = self.ad_data[self.ad_data["userPrincipalName"].str.lower() == email.lower()]
-        
-        # If no match, try the mail column
-        if len(match) == 0:
-            match = self.ad_data[self.ad_data["mail"].str.lower() == email.lower()]
-            
-        # Return the display name if found, otherwise return the email
-        if len(match) > 0 and not pd.isna(match.iloc[0]["displayName"]):
-            return match.iloc[0]["displayName"]
-        else:
-            return email
+        # Use the refactored method from UserDataLoader
+        return self.data_loader.resolve_user_name_from_ad(email)
     
     def get_active_users_trend(self) -> pd.DataFrame:
         """Get the trend of active users over time.
@@ -70,27 +53,27 @@ class UserAnalyzer(DataAnalyzer):
         Returns:
             DataFrame with period_start and active_users columns
         """
-        if self.user_data is None:
-            raise ValueError("User data not loaded")
-
-        # Define active users as those who have sent at least one message
+        user_data = self.data_loader.get_user_data()
+        if user_data is None:
+            raise ValueError("No user data available")
+            
+        # Mark users as active if they have at least one message
         active_users = (
-            self.user_data[self.user_data["messages"].fillna(0) > 0]
-            .groupby(["period_start"])
-            .size()
-            .reset_index(name="active_users")
+            user_data[user_data["messages"].fillna(0) > 0]
+            .groupby("period_start")
+            .agg(active_users=pd.NamedAgg(column="email", aggfunc="nunique"))
+            .reset_index()
         )
         
-        # If there are no active users based on messages, fall back to is_active flag
-        if len(active_users) == 0 or active_users["active_users"].sum() == 0:
-            print("No users with messages found, falling back to is_active flag")
+        # If there's an 'is_active' column, use that instead
+        if "is_active" in user_data.columns:
             active_users = (
-                self.user_data[self.user_data["is_active"] == 1]
-                .groupby(["period_start"])
-                .size()
-                .reset_index(name="active_users")
+                user_data[user_data["is_active"] == 1]
+                .groupby("period_start")
+                .agg(active_users=pd.NamedAgg(column="email", aggfunc="nunique"))
+                .reset_index()
             )
-        
+            
         # Convert period_start to datetime with consistent timezone handling
         active_users["period_start"] = pd.to_datetime(active_users["period_start"], utc=True).dt.tz_convert(DEFAULT_TIMEZONE)
         
@@ -131,20 +114,20 @@ The trend indicates how user adoption and engagement has changed over time."""
         """Get the trend of message volume over time.
         
         Returns:
-            DataFrame with period_start and messages columns
+            DataFrame with period_start and total_messages columns
         """
-        if self.user_data is None:
-            raise ValueError("User data not loaded")
-
-        # Group by period and sum messages
+        user_data = self.data_loader.get_user_data()
+        if user_data is None:
+            raise ValueError("No user data available")
+            
+        # Sum messages by period
         message_volume = (
-            self.user_data
-            .groupby(["period_start"])
-            ["messages"]
-            .sum()
+            user_data
+            .groupby("period_start")
+            .agg(total_messages=pd.NamedAgg(column="messages", aggfunc="sum"))
             .reset_index()
         )
-        
+            
         # Convert period_start to datetime
         message_volume["period_start"] = pd.to_datetime(message_volume["period_start"], utc=True).dt.tz_convert(DEFAULT_TIMEZONE)
         
@@ -172,7 +155,7 @@ the impact of new features/promotions on engagement."""
         return self.visualizer.create_time_series_plot(
             data=message_volume,
             x_col="period_start",
-            y_col="messages",
+            y_col="total_messages",
             title="Message Volume Trend",
             xlabel="Period",
             ylabel="Number of Messages",
@@ -181,37 +164,29 @@ the impact of new features/promotions on engagement."""
             save=save
         )
     
-    def generate_message_histogram(self, bins: int = 20, max_value: Optional[int] = None, save: bool = True) -> Optional[plt.Figure]:
-        """Generate a histogram of messages sent by users.
+    def generate_message_histogram(self, output_path: Optional[Union[str, Path]] = None) -> None:
+        """Generate a histogram of average messages per user.
         
         Args:
-            bins: Number of bins for the histogram
-            max_value: Maximum value to include in the histogram (None for no limit)
-            save: Whether to save the figure to the output directory
-            
-        Returns:
-            The matplotlib figure if save is False, otherwise None
+            output_path: Optional path to save the histogram image
         """
-        if self.user_data is None:
-            raise ValueError("User data not loaded")
-        
-        comment = """This histogram shows the distribution of average messages sent by users.
-The x-axis represents the average number of messages per user across all periods.
-The y-axis shows how many users fall into each message count range.
-This helps identify patterns in user engagement and message frequency."""
-        
-        return self.visualizer.create_histogram(
-            data=self.user_data,
-            value_col="messages",
-            bins=bins,
-            max_value=max_value,
-            log_scale=False,
+        user_data = self.data_loader.get_user_data()
+        if user_data is None:
+            raise ValueError("No user data available")
+            
+        # Default output path if not provided
+        if output_path is None:
+            output_path = self.output_dir / "message_histogram.png"
+            
+        # Generate the histogram
+        self.visualizer.plot_message_histogram(
+            data=user_data,
+            x="messages",
+            output_path=output_path,
             title="Distribution of Messages per User",
-            xlabel="Number of Messages",
+            xlabel="Messages",
             ylabel="Number of Users",
-            comment=comment,
-            filename="message_histogram.png",
-            save=save
+            log_scale=False
         )
     
     def generate_message_histogram_log(self, bins: int = 20, max_value: Optional[int] = None, save: bool = True) -> Optional[plt.Figure]:
@@ -225,8 +200,9 @@ This helps identify patterns in user engagement and message frequency."""
         Returns:
             The matplotlib figure if save is False, otherwise None
         """
-        if self.user_data is None:
-            raise ValueError("User data not loaded")
+        user_data = self.data_loader.get_user_data()
+        if user_data is None:
+            raise ValueError("No user data available")
         
         comment = """This histogram shows the distribution of messages sent by users with a logarithmic y-axis scale.
 The x-axis represents the number of messages per user.
@@ -234,7 +210,7 @@ The y-axis (log scale) shows how many users fall into each message count range.
 Log scale helps visualize the distribution when there are large differences in frequency counts."""
         
         return self.visualizer.create_histogram(
-            data=self.user_data,
+            data=user_data,
             value_col="messages",
             bins=bins,
             max_value=max_value,
@@ -254,50 +230,43 @@ Log scale helps visualize the distribution when there are large differences in f
         self.generate_message_histogram()
         self.generate_message_histogram_log()
     
-    def get_engagement_levels(self, high_threshold: int = 20, low_threshold: int = 5) -> pd.DataFrame:
-        """Categorize users by engagement level based on average message count across all periods.
+    def get_engagement_levels(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """Get user engagement levels by analyzing message patterns.
         
-        Args:
-            high_threshold: Minimum average number of messages to be considered highly engaged
-            low_threshold: Maximum average number of messages to be considered low engaged
-            
         Returns:
-            DataFrame with user information and engagement level
+            Tuple of (engaged_users, non_engaged_users) DataFrames
         """
-        if self.user_data is None:
-            raise ValueError("User data not loaded")
+        user_data = self.data_loader.get_user_data()
+        if user_data is None:
+            raise ValueError("No user data available")
             
-        # Print data quality information for debugging
-        print("\nMessage Data Quality Check:")
-        print(f"Total rows in user_data: {len(self.user_data)}")
-        print(f"Rows with null 'messages': {self.user_data['messages'].isna().sum()}")
+        # Print some diagnostic information
+        print(f"Total rows in user_data: {len(user_data)}")
         
-        # Check if 'messages' column is numeric and convert if needed
-        if not pd.api.types.is_numeric_dtype(self.user_data['messages']):
-            print(f"Warning: 'messages' column is not numeric, attempting to convert")
+        # Ensure messages column is numeric
+        if not pd.api.types.is_numeric_dtype(user_data['messages']):
             try:
-                self.user_data['messages'] = pd.to_numeric(self.user_data['messages'], errors='coerce')
+                print("Converting 'messages' column to numeric...")
+                user_data['messages'] = pd.to_numeric(user_data['messages'], errors='coerce')
+                print(f"Conversion successful. NaN values: {user_data['messages'].isna().sum()}")
             except Exception as e:
-                print(f"Error converting 'messages' to numeric: {e}")
-                # Print sample values to help diagnose the issue
-                print(f"Sample 'messages' values: {self.user_data['messages'].head().tolist()}")
+                print(f"Error converting 'messages' to numeric: {str(e)}")
+                print(f"Sample 'messages' values: {user_data['messages'].head().tolist()}")
         
-        # Continue with debugging info
-        print(f"Rows with zero 'messages': {len(self.user_data[self.user_data['messages'] == 0])}")
-        print(f"Rows with positive 'messages': {len(self.user_data[self.user_data['messages'] > 0])}")
+        # More diagnostics
+        print(f"Rows with zero 'messages': {len(user_data[user_data['messages'] == 0])}")
+        print(f"Rows with positive 'messages': {len(user_data[user_data['messages'] > 0])}")
         
-        # Filter to include rows with valid message data AND positive message count
-        valid_data = self.user_data[
-            (pd.notna(self.user_data["messages"])) & 
-            (self.user_data["messages"] > 0)
-        ].copy()
+        # Filter to valid data (non-null, positive messages)
+        valid_data = user_data[
+            (pd.notna(user_data["messages"])) & 
+            (user_data["messages"] > 0)
+        ]
         
-        print(f"Rows after filtering: {len(valid_data)}")
-        
-        # If we don't have enough data after filtering, use all data with messages >= 0
-        if len(valid_data) < 2:
-            print("Warning: Not enough data after filtering for positive messages. Using all valid message data.")
-            valid_data = self.user_data[pd.notna(self.user_data["messages"])].copy()
+        # If we have no valid data after filtering, try a different approach
+        if len(valid_data) == 0:
+            print("No valid data after filtering for positive messages. Using all non-null data.")
+            valid_data = user_data[pd.notna(user_data["messages"])].copy()
             print(f"Rows after relaxed filtering: {len(valid_data)}")
             
         # Group by user identifiers and calculate statistics

@@ -64,6 +64,14 @@ if ! process_engagement --input-dir "$DATA_DIR" --output-dir "$DATA_DIR" --start
 fi
 echo "Weekly engagement metrics processed successfully!"
 
+# Step 2.5: Identify outliers in the engagement data
+echo "Step 2.5: Identifying outliers in engagement data..."
+if ! identify_outliers --data-dir "$DATA_DIR" --output-dir "$DATA_DIR" --iqr-multiplier 3.0 --start-date "$START_DATE" --weekly-chunks; then
+    echo "Error: Failed to identify outliers"
+    exit 1
+fi
+echo "Outlier identification complete!"
+
 # Step 3: Generate all trends and visualizations
 echo "Step 3: Generating trend analyses and visualizations..."
 if ! all_trends --data-dir "$DATA_DIR" --output-dir "$OUTPUT_DIR"; then

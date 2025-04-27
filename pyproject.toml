@@ -25,6 +25,7 @@ dependencies = [
 all_trends = "chatgpt_data.cli.all_trends:main"
 fetch_raw_data = "chatgpt_data.cli.fetch_raw_data:main"
 process_engagement = "chatgpt_data.cli.process_engagement:main"
+identify_outliers = "chatgpt_data.cli.identify_outliers:main"
 management_chains = "chatgpt_data.utils.management_chain:main"
 
 [project.optional-dependencies]
