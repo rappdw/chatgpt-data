@@ -1,0 +1,382 @@
+display_name,email,user_status,avg_messages,first_period,last_period,engagement_level,manager_7,manager_6,manager_5,manager_4,manager_3,manager_2,manager_1
+Knox Buciak,kbuciak@proofpoint.com,active,318.14,2025-03-08,2025-04-25,high,Sherry To,Chris Lott,Lance Swarbrick,JP Dinh,John Abel,Remi Thomas,Sumit Dhawan
+Scott Bower,sbower@proofpoint.com,active,280.92,2024-11-09,2025-04-25,high,,,,,Timothy Choi,Ryan Kalember,Sumit Dhawan
+Ori Gerbi,ogerbi@proofpoint.com,active,217.38,2025-03-01,2025-04-25,high,,,Ben Zecharia,Shlomi Shor (שלומי שור),Tal Tikotzki,Mayank Choudhary,Sumit Dhawan
+Herman Ye,hye@proofpoint.com,active,180.86,2025-03-08,2025-04-25,high,,,,Dave Ely,Harry Labana,Mayank Choudhary,Sumit Dhawan
+Sebastian Coe,scoe@proofpoint.com,active,148.43,2024-11-16,2025-04-25,high,,,Erich Anderson,Frank Aneiros,Kevin Epstein,Rohit Dixit,Sumit Dhawan
+Lynsey McGimpsey,lmcgimpsey@proofpoint.com,active,136.38,2025-02-22,2025-04-25,high,,,,,Thomas Keating,Michael Frendo,Sumit Dhawan
+Lance Swarbrick,lswarbrick@proofpoint.com,active,130.38,2025-01-25,2025-04-25,high,,,,JP Dinh,John Abel,Remi Thomas,Sumit Dhawan
+Boi-Yeanoh Adams,boadams@proofpoint.com,active,113.8,2025-02-15,2025-04-25,high,,,,,,Kim Sullivan,Sumit Dhawan
+Slawek Gawlowski,sgawlowski@proofpoint.com,active,113.14,2024-11-16,2025-04-25,high,,,Marc De Frontignac,Adrian Covich,Nate Chessin,Blake Salle,Sumit Dhawan
+Michael Lambert,mlambert@proofpoint.com,active,111.33,2025-04-05,2025-04-25,high,,Darrin Crawford,Lance Swarbrick,JP Dinh,John Abel,Remi Thomas,Sumit Dhawan
+Srinivas Majeti,smajeti@proofpoint.com,active,94.86,2024-11-09,2025-04-25,high,,,,Anand Somani,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Seth Harbeck,sharbeck@proofpoint.com,active,91.36,2024-11-02,2025-04-25,high,,,,Keven Mabey,Nate Chessin,Blake Salle,Sumit Dhawan
+Shan Tang,stang@proofpoint.com,active,91.0,2025-03-22,2025-04-25,high,,,Nir Shneor,Shlomi Shor (שלומי שור),Tal Tikotzki,Mayank Choudhary,Sumit Dhawan
+Daniel Rapp,drapp@proofpoint.com,active,90.32,2024-11-02,2025-04-25,high,,,,,,Michael Frendo,Sumit Dhawan
+Sreenidhi Kallu,skallu@proofpoint.com,active,88.8,2025-02-15,2025-04-25,high,,,,Robert Weitershausen,John Abel,Remi Thomas,Sumit Dhawan
+Shayla Mills,smills@proofpoint.com,active,86.2,2025-02-15,2025-04-25,high,,,,Raphael Durand,Boi-Yeanoh Adams,Kim Sullivan,Sumit Dhawan
+Stanley Chen,stchen@proofpoint.com,active,86.14,2025-03-08,2025-04-25,high,,Rohit Anil Wadke,Phil Barlow,Jeremiah Ness,Harry Labana,Mayank Choudhary,Sumit Dhawan
+Nikhil Shrivastava,nshrivastava@proofpoint.com,active,84.18,2025-02-08,2025-04-25,high,,Eric Paik,Mark Stetzer,Ramesh Pidikiti,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Cuong Nguyen,cunguyen@proofpoint.com,active,83.67,2025-03-08,2025-04-25,high,,,,Ben McLaughlin,John Abel,Remi Thomas,Sumit Dhawan
+Mor moshe Twito,mtwito@proofpoint.com,active,82.67,2024-11-09,2025-04-25,high,,,Sivan Bar-Chen,Itzik Zandok,Tal Tikotzki,Mayank Choudhary,Sumit Dhawan
+Justin Miller,jmiller@proofpoint.com,inactive,82.09,2024-11-09,2025-03-14,high,,,Richard Armstrong,Keven Mabey,Nate Chessin,Blake Salle,Sumit Dhawan
+John Sucheski,jsucheski@proofpoint.com,active,73.25,2025-03-01,2025-04-25,high,,,Marcel Eisma,Denise Harlan,Brad Hargrave,Blake Salle,Sumit Dhawan
+John Burns,jburns@proofpoint.com,active,71.55,2025-02-01,2025-04-25,high,,,,Riaan Kok,Thomas Keating,Michael Frendo,Sumit Dhawan
+Amine Kouta,akouta@proofpoint.com,active,68.65,2024-11-09,2025-04-25,high,,,Brayden Winterton,Mike Jones,Dan Rapp,Michael Frendo,Sumit Dhawan
+Keith Redfern,kredfern@proofpoint.com,active,67.09,2025-02-08,2025-04-25,high,,,Lyndsey Parsons,John Bakewell,Thomas Keating,Michael Frendo,Sumit Dhawan
+Liz Lashgari,llashgari@proofpoint.com,active,66.6,2025-02-15,2025-04-25,high,,,,,Cynthia O'Keeffe,Kim Sullivan,Sumit Dhawan
+Ali Rezafard,arezafard@proofpoint.com,active,65.05,2024-12-07,2025-04-25,high,,,,Randy Pargman,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Cole Juracek,cjuracek@proofpoint.com,active,64.73,2024-11-09,2025-04-25,high,,,Ryan Skinner,Mike Jones,Dan Rapp,Michael Frendo,Sumit Dhawan
+Stoyko Stanchev,sstanchev@proofpoint.com,active,63.12,2025-03-01,2025-04-25,high,,,Seva Ivanov,Shlomi Shor (שלומי שור),Tal Tikotzki,Mayank Choudhary,Sumit Dhawan
+Stephen Garland,sgarland@proofpoint.com,active,58.8,2025-02-15,2025-04-25,high,,,Paul Gregg,John Bakewell,Thomas Keating,Michael Frendo,Sumit Dhawan
+Rachelle Benson,rbenson@proofpoint.com,active,58.65,2024-11-16,2025-04-25,high,,,,,Boi-Yeanoh Adams,Kim Sullivan,Sumit Dhawan
+Constanza Herrera,conherrera@proofpoint.com,active,58.25,2024-11-09,2025-04-25,high,,,,,Shreya Patel,Sonia Zuno,Sumit Dhawan
+Sebastian Gallino,sgallino@proofpoint.com,active,58.0,2025-02-22,2025-04-25,high,,,,Constanza Herrera Varela,Shreya Patel,Sonia Zuno,Sumit Dhawan
+Deepa Padaki,dpadaki@proofpoint.com,active,56.64,2024-11-02,2025-04-25,high,,,,Robert Weitershausen,John Abel,Remi Thomas,Sumit Dhawan
+Yugam Sharma,ysharma@proofpoint.com,active,54.89,2025-02-22,2025-04-25,high,,,Anand Somani,Anand Somani,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Anamika Shivhare,ashivhare@proofpoint.com,inactive,54.77,2024-11-02,2025-03-07,high,,Raghavendran Hanumantharau,Raghavendran Hanumantharau,Ben McLaughlin,John Abel,Remi Thomas,Sumit Dhawan
+Dave Gupta,dgupta@proofpoint.com,active,53.73,2025-02-08,2025-04-25,high,,,Deb Briggs,Bernardo Fourcade,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Shalil Majithia,smajithia@proofpoint.com,active,53.5,2025-02-15,2025-04-25,high,,,,,Harry Labana,Mayank Choudhary,Sumit Dhawan
+Brian Merrill,bmerrill@proofpoint.com,active,53.0,2025-03-01,2025-04-25,high,,,Mark Athay,Wayne Nelson,Alex Kremer,Mayank Choudhary,Sumit Dhawan
+Sivagami Ramiah,sramiah@proofpoint.com,active,51.75,2024-11-09,2025-04-25,high,,,Anthony Dorie,Ramesh Pidikiti,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Wayne Nelson,wnelson@proofpoint.com,active,50.67,2024-11-09,2025-04-25,high,,,,,Alex Kremer,Mayank Choudhary,Sumit Dhawan
+Asher Parker,asparker@proofpoint.com,active,49.89,2025-02-22,2025-04-25,high,,,Anand Somani,Anand Somani,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Olga Vingurt,ovingurt@proofpoint.com,active,49.71,2025-03-08,2025-04-25,high,,,,Meny Duek,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Eleonore Alesi,ealesi@proofpoint.com,active,49.0,2025-03-08,2025-04-25,high,,,,Aruna Sreeram,Rick Dales,Mayank Choudhary,Sumit Dhawan
+Zohar Pahima,zpahima@proofpoint.com,inactive,46.69,2024-11-16,2025-03-07,high,,,Or Lindner,Meny Duek,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Jeff Burstein,jburstein@proofpoint.com,inactive,46.5,2024-11-02,2024-11-15,high,,,,,Rengabashyam Srinivas,Darren Lee,Sumit Dhawan
+Yossi Tamarov,ytamarov@proofpoint.com,active,46.39,2024-11-16,2025-04-25,high,,,,Meny Duek,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Avraham Hababo,ahababo@proofpoint.com,active,46.22,2024-11-02,2025-04-18,high,,Lee Bilu,Nir Laufer,Meny Duek,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Richard Shaw,rshaw@proofpoint.com,active,46.12,2024-11-16,2025-04-25,high,,,,John Bakewell,Thomas Keating,Michael Frendo,Sumit Dhawan
+Greg McSparron,gmcsparron@proofpoint.com,active,44.18,2025-02-08,2025-04-25,high,,,,John Bakewell,Thomas Keating,Michael Frendo,Sumit Dhawan
+Daniel Salo,dsalo@proofpoint.com,active,43.82,2024-11-30,2025-04-25,high,,,,Mike Jones,Dan Rapp,Michael Frendo,Sumit Dhawan
+Jonathan Boyko,jboyko@proofpoint.com,active,43.6,2024-12-07,2025-04-25,high,,,Erich Anderson,Frank Aneiros,Kevin Epstein,Rohit Dixit,Sumit Dhawan
+Parag Bajaria,pbajaria@proofpoint.com,active,43.5,2025-03-01,2025-04-25,high,,,,Ravi Ithal,Amer Deeba,Mayank Choudhary,Sumit Dhawan
+Katherine Chow,kchow@proofpoint.com,active,43.47,2024-12-07,2025-04-25,high,,,,,Beth Brewer,Kim Sullivan,Sumit Dhawan
+Oded Angel,oangel@proofpoint.com,active,42.25,2025-03-01,2025-04-25,high,,,Batya Ben-Shabat (בתיה בן שבת),Itzik Zandok,Tal Tikotzki,Mayank Choudhary,Sumit Dhawan
+Shreya Patel,shpatel@proofpoint.com,active,42.0,2024-11-09,2025-04-25,high,,,,,,Sonia Zuno,Sumit Dhawan
+Yadin Tzaban,ytzaban@proofpoint.com,active,40.83,2024-11-16,2025-04-25,high,,,Or Lindner,Meny Duek,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Annalies Vuong,avuong@proofpoint.com,active,40.61,2024-11-09,2025-04-11,high,,,,Kurt Wescoe,Karen Letain,Darren Lee,Sumit Dhawan
+Tadgh Browne,tbrowne@proofpoint.com,active,40.46,2024-11-09,2025-04-25,high,,,,Tadhg O'Sullivan,Mike Hickman,Remi Thomas,Sumit Dhawan
+Arun kumar Viswanathan,aviswanathan@proofpoint.com,active,40.23,2024-11-16,2025-04-25,high,,Pretha Thomas,Jun Wang,Angelo Starink,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Uways Ahmad,uahmad@proofpoint.com,active,40.09,2024-11-09,2025-04-25,high,,,,Frank Aneiros,Kevin Epstein,Rohit Dixit,Sumit Dhawan
+Steven Lyde,slyde@proofpoint.com,active,39.43,2024-11-09,2025-04-25,high,,,,Mike Jones,Dan Rapp,Michael Frendo,Sumit Dhawan
+Hannah Rapetti,hrapetti@proofpoint.com,active,39.41,2024-11-09,2025-03-28,high,,,Ann Reigelman,Kenneth Khouri,Kevin Epstein,Rohit Dixit,Sumit Dhawan
+Josue Diaz,jodiaz@proofpoint.com,active,39.17,2025-03-15,2025-04-25,high,,,,,Alex Kremer,Mayank Choudhary,Sumit Dhawan
+Jonathan Sproule,jsproule@proofpoint.com,active,38.61,2024-11-09,2025-04-25,high,,,Rima Lymus,Ben McLaughlin,John Abel,Remi Thomas,Sumit Dhawan
+Will Nunan,wnunan@proofpoint.com,active,38.57,2025-03-08,2025-04-25,high,,,Chadia Sparrer,Joe Schwartz,Vincent Merlin,Blake Salle,Sumit Dhawan
+Yuval Doron,ydoron@proofpoint.com,inactive,37.75,2025-01-11,2025-03-07,high,,,Yossi Tamarov,Meny Duek,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Basant Kumar,bkumar@proofpoint.com,active,36.81,2024-11-09,2025-04-25,high,,,,Pablo Passera,Rengabashyam Srinivas,Darren Lee,Sumit Dhawan
+Abriana Jones,abjones@proofpoint.com,inactive,36.67,2024-11-02,2024-11-22,high,,,,Talya Williams,Boi-Yeanoh Adams,Kim Sullivan,Sumit Dhawan
+John McCabe,jmccabe@proofpoint.com,active,36.38,2024-11-16,2025-04-25,high,,,,John Bakewell,Thomas Keating,Michael Frendo,Sumit Dhawan
+Michael Millar,mmillar@proofpoint.com,active,36.25,2025-02-01,2025-04-11,high,,,,John Bakewell,Thomas Keating,Michael Frendo,Sumit Dhawan
+Priyanka Gandhi,pgandhi@proofpoint.com,active,35.82,2024-11-09,2025-04-25,high,,,Feng Ge,Angelo Starink,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Matt Kresse,mkresse@proofpoint.com,active,35.42,2024-11-09,2025-04-25,high,,,Anthony Dorie,Ramesh Pidikiti,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Sohel Ahmed,soahmed@proofpoint.com,active,35.4,2025-01-11,2025-04-25,high,,,Anand Somani,Anand Somani,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Maggie Leach,mleach@proofpoint.com,active,35.3,2025-01-11,2025-04-25,high,,,Cynthia Herrera,Debra Kladis,Brad Hargrave,Blake Salle,Sumit Dhawan
+Avinash Patel,apatel@proofpoint.com,active,34.69,2025-01-25,2025-04-25,high,,,,Jessica Vans,Mike Hickman,Remi Thomas,Sumit Dhawan
+Fadia Jaffari,fjaffari@proofpoint.com,inactive,34.67,2024-11-02,2024-11-22,high,,Miranda Dinkelspiel,Keith Taylor,Amy Crum,Chris Danyo,Blake Salle,Sumit Dhawan
+David Dabush,ddabush@proofpoint.com,inactive,34.27,2024-11-16,2025-03-07,high,,Tal Shneerson,Or Lindner,Meny Duek,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Harsh Verma,hverma@proofpoint.com,inactive,34.0,2024-11-02,2024-11-15,high,Emma Hulme,Rupert Taylor,Edward Bishop,Edward Bishop,Timothy Sadler,Darren Lee,Sumit Dhawan
+Mike Jones,mikjones@proofpoint.com,active,33.74,2024-11-02,2025-04-25,high,,,,,Dan Rapp,Michael Frendo,Sumit Dhawan
+Pablo Passera,ppassera@proofpoint.com,active,33.59,2024-11-02,2025-04-18,high,,,,,Rengabashyam Srinivas,Darren Lee,Sumit Dhawan
+Agostino Pisanelli,apisanelli@proofpoint.com,inactive,33.53,2024-11-16,2025-03-07,high,,,Luda Margolis,Itzik Zandok,Tal Tikotzki,Mayank Choudhary,Sumit Dhawan
+Mark Kelly,markelly@proofpoint.com,inactive,33.5,2024-11-02,2024-11-29,high,,,,Alexis Dorais-Joncas,Daniel Blackford,Ryan Kalember,Sumit Dhawan
+Trevor Tungseth,ttungseth@proofpoint.com,active,33.05,2024-11-30,2025-04-25,high,,,,Kevin San Diego,Robert Holmes,Darren Lee,Sumit Dhawan
+Greg Robinson,grobinson@proofpoint.com,inactive,33.0,2024-11-30,2025-03-07,high,,,,Jeremiah Ness,Harry Labana,Mayank Choudhary,Sumit Dhawan
+Freddie Tantoco,ftantoco@proofpoint.com,active,32.92,2024-11-16,2025-04-25,high,,,Christine Martinez,Greg Colburn,Robert Holmes,Darren Lee,Sumit Dhawan
+Lyndsey Parsons,lparsons@proofpoint.com,active,32.88,2024-12-14,2025-04-25,high,,,,John Bakewell,Thomas Keating,Michael Frendo,Sumit Dhawan
+Michael Yee,myee@proofpoint.com,active,32.83,2025-03-08,2025-04-25,high,Sherry To,Chris Lott,Lance Swarbrick,JP Dinh,John Abel,Remi Thomas,Sumit Dhawan
+Alessandra Filice,afilice@proofpoint.com,active,32.44,2024-11-09,2025-04-25,high,,Stephen Coverdale,Matthew Moorehead,Kenneth Khouri,Kevin Epstein,Rohit Dixit,Sumit Dhawan
+Dvora Toker,dtoker@proofpoint.com,inactive,32.31,2024-11-16,2025-03-07,high,,Tal Shneerson,Or Lindner,Meny Duek,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Alec Lebedev,alebedev@proofpoint.com,active,32.27,2024-11-09,2025-04-25,high,,,,,Dan Rapp,Michael Frendo,Sumit Dhawan
+Nicole Silacci,nsilacci@proofpoint.com,active,32.25,2025-03-29,2025-04-25,high,,,,Brian Reed,Timothy Choi,Ryan Kalember,Sumit Dhawan
+Itay Nachum,inachum@proofpoint.com,inactive,32.0,2025-03-15,2025-03-21,high,,,,,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Darrin Crawford,dacrawford@proofpoint.com,active,31.8,2025-02-08,2025-04-18,high,,,Lance Swarbrick,JP Dinh,John Abel,Remi Thomas,Sumit Dhawan
+Todd Nagengast,tnagengast@proofpoint.com,active,31.25,2025-02-01,2025-04-25,high,,,,,Angela Knox,Michael Frendo,Sumit Dhawan
+Dor Ben tulila,dbentulila@proofpoint.com,inactive,30.77,2024-11-16,2025-02-28,high,,Tal Shneerson,Or Lindner,Meny Duek,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Ramesh Pidikiti,rpidikiti@proofpoint.com,active,30.62,2024-11-09,2025-04-25,high,,,,Ramesh Pidikiti,Mariano Cilia,Michael Frendo,Sumit Dhawan
+John Bakewell,jbakewell@proofpoint.com,active,30.3,2025-02-01,2025-04-18,high,,,,,Thomas Keating,Michael Frendo,Sumit Dhawan
+Pablo Michelis,pmichelis@proofpoint.com,active,30.2,2025-02-08,2025-04-25,high,,,,,,Michael Frendo,Sumit Dhawan
+Siddhesh Dandekar,sdandekar@proofpoint.com,inactive,30.0,2024-11-23,2025-03-21,high,,Girish Potnis,Satya Jena,Satya Jena,John Abel,Remi Thomas,Sumit Dhawan
+Sonia Zuno,szuno@proofpoint.com,active,29.83,2024-11-09,2025-04-25,high,,,,,,,Sumit Dhawan
+Saugat Adhikari,sadhikari@proofpoint.com,active,29.82,2025-02-08,2025-04-25,high,,Eric Paik,Mark Stetzer,Ramesh Pidikiti,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Pretha Thomas,pthomas@proofpoint.com,active,29.68,2024-11-09,2025-04-25,high,,,Jun Wang,Angelo Starink,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Claire Hordle,chordle@proofpoint.com,active,29.62,2025-02-22,2025-04-18,high,,,,Nicko Vujasinovic,Brad Hargrave,Blake Salle,Sumit Dhawan
+Prasanna Basavapatna,pbasavapatna@proofpoint.com,active,29.29,2024-11-02,2025-04-25,high,,,,,,Michael Frendo,Sumit Dhawan
+Conor Kettle,ckettle@proofpoint.com,active,29.0,2025-03-08,2025-04-18,high,,,Michael Millar,John Bakewell,Thomas Keating,Michael Frendo,Sumit Dhawan
+Andrew Nicholas,anicholas@proofpoint.com,active,28.83,2025-03-15,2025-04-25,high,,,Ronen Madjar,Qasim Ali,Linda Lazzareschi,Rohit Dixit,Sumit Dhawan
+Elia Mak,emak@proofpoint.com,active,28.7,2024-11-16,2025-04-25,high,,,,,,Ryan Kalember,Sumit Dhawan
+Lee Bilu,lbilu@proofpoint.com,active,28.68,2024-11-02,2025-04-25,high,,,Nir Laufer,Meny Duek,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Abhi Dubal,adubal@proofpoint.com,active,28.18,2024-11-02,2025-04-25,high,,,Ryan Skinner,Mike Jones,Dan Rapp,Michael Frendo,Sumit Dhawan
+Sharon Rozinsky,srozinsky@proofpoint.com,active,27.6,2025-03-22,2025-04-25,high,,,Nir Shneor,Shlomi Shor (שלומי שור),Tal Tikotzki,Mayank Choudhary,Sumit Dhawan
+Marcelo Caro,mcaro@proofpoint.com,active,27.4,2024-11-09,2025-04-25,high,,,,Gabriel Infante-Lopez,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Beth Brewer,ebrewer@proofpoint.com,active,26.71,2024-11-09,2025-04-25,high,,,,,,Kim Sullivan,Sumit Dhawan
+Alok Jain,alojain@proofpoint.com,inactive,26.5,2025-01-25,2025-02-21,high,,,,,,,
+Zack Bartel,zbartel@proofpoint.com,active,26.45,2024-11-02,2025-04-25,high,,,Roey Kosovski,Shlomi Shor (שלומי שור),Tal Tikotzki,Mayank Choudhary,Sumit Dhawan
+Stephen Norrby,snorrby@proofpoint.com,active,26.4,2025-02-15,2025-04-25,high,,,Lyndsey Parsons,John Bakewell,Thomas Keating,Michael Frendo,Sumit Dhawan
+Moshe Armel,marmel@proofpoint.com,active,26.38,2024-12-28,2025-04-25,high,,,,Itay Nachum,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Nebu John,njohn@proofpoint.com,active,26.29,2025-03-08,2025-04-25,high,,Rohit Anil Wadke,Phil Barlow,Jeremiah Ness,Harry Labana,Mayank Choudhary,Sumit Dhawan
+Eric Domagalski,edomagalski@proofpoint.com,active,26.29,2024-11-09,2025-04-25,high,,,,,,Remi Thomas,Sumit Dhawan
+Michael Bishop,mbishop@proofpoint.com,active,26.29,2024-11-09,2025-04-25,high,,,Jim Salter,Satya Jena,John Abel,Remi Thomas,Sumit Dhawan
+David Biagioni,dbiagioni@proofpoint.com,active,25.76,2024-11-09,2025-04-25,high,,,Ryan Skinner,Mike Jones,Dan Rapp,Michael Frendo,Sumit Dhawan
+Tal Cohen,tcohen@proofpoint.com,active,25.67,2025-04-05,2025-04-25,high,,,Roee Schein (רועי שיין),Shlomi Shor (שלומי שור),Tal Tikotzki,Mayank Choudhary,Sumit Dhawan
+Hector Juarez,hjuarez@proofpoint.com,active,25.62,2024-11-16,2025-04-25,high,,,,Pablo Passera,Rengabashyam Srinivas,Darren Lee,Sumit Dhawan
+Sherry To,sto@proofpoint.com,active,25.57,2025-03-08,2025-04-25,high,,Chris Lott,Lance Swarbrick,JP Dinh,John Abel,Remi Thomas,Sumit Dhawan
+Jeremiah Ness,jness@proofpoint.com,inactive,25.06,2024-11-09,2025-03-07,high,,,,,Harry Labana,Mayank Choudhary,Sumit Dhawan
+Robert Banister,rbanister@proofpoint.com,active,25.0,2025-01-11,2025-04-18,high,,,David Valentine,JP Dinh,John Abel,Remi Thomas,Sumit Dhawan
+Michael Sabia,msabia@proofpoint.com,active,25.0,2025-01-25,2025-04-25,high,,,Lance Swarbrick,JP Dinh,John Abel,Remi Thomas,Sumit Dhawan
+Satya Jena,sjena@proofpoint.com,active,24.76,2024-11-09,2025-04-25,high,,,,Satya Jena,John Abel,Remi Thomas,Sumit Dhawan
+Denise Harlan,dharlan@proofpoint.com,active,24.67,2025-03-22,2025-04-25,high,,,,,Brad Hargrave,Blake Salle,Sumit Dhawan
+Marcel Eisma,meisma@proofpoint.com,active,24.5,2025-03-01,2025-04-25,high,,,,Denise Harlan,Brad Hargrave,Blake Salle,Sumit Dhawan
+Gabriel Infante-Lopez,ginfante@proofpoint.com,active,24.0,2025-01-18,2025-04-25,high,,,,,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Oscar Yepez,oyepez@proofpoint.com,active,23.75,2025-03-01,2025-04-25,high,,,,,,Mayank Choudhary,Sumit Dhawan
+Jolene Perez,jolperez@proofpoint.com,active,23.67,2025-02-15,2025-04-25,high,,,,,Terri West,Kim Sullivan,Sumit Dhawan
+Andrew Nguyen,annguyen@proofpoint.com,active,23.18,2024-12-07,2025-04-25,high,,,,,Shreya Patel,Sonia Zuno,Sumit Dhawan
+Ryan Zimmel,rzimmel@proofpoint.com,active,22.86,2024-11-02,2025-04-25,high,,,,Anand Somani,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Haley Kotch,hkotch@proofpoint.com,active,22.8,2025-03-08,2025-04-25,high,,,Sagi Shechter,Itzik Zandok,Tal Tikotzki,Mayank Choudhary,Sumit Dhawan
+Artem Gololobov,agololobov@proofpoint.com,active,22.78,2025-02-08,2025-04-25,high,,,Mathew Nisbet,Bernardo Fourcade,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Jeremie Simon,jsimon@proofpoint.com,active,22.74,2024-11-09,2025-04-25,high,,,,,Alex Kremer,Mayank Choudhary,Sumit Dhawan
+Rajesh Kumar,rkumar@proofpoint.com,active,22.69,2024-11-09,2025-04-25,high,,,,Wayne Nelson,Alex Kremer,Mayank Choudhary,Sumit Dhawan
+Nazma Bandani,nbandani@proofpoint.com,active,22.61,2024-11-30,2025-04-25,high,,,,Jeremie Simon,Alex Kremer,Mayank Choudhary,Sumit Dhawan
+Jayaram Datti,jdatti@proofpoint.com,active,22.52,2024-11-09,2025-04-18,high,,Sivagami Ramiah,Anthony Dorie,Ramesh Pidikiti,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Rima Lymus,rlymus@proofpoint.com,active,22.38,2025-01-18,2025-04-25,high,,,,Ben McLaughlin,John Abel,Remi Thomas,Sumit Dhawan
+Alfred Hong,ahong@proofpoint.com,active,22.07,2024-11-09,2025-04-25,high,,,,Angelo Starink,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Tom Luong,toluong@proofpoint.com,active,21.5,2025-03-15,2025-04-25,high,,Trevor Ahmedali,Vinit Adhopia,Nandak Venkatesan,Harry Labana,Mayank Choudhary,Sumit Dhawan
+Dan Achin,dachin@proofpoint.com,active,21.45,2024-11-09,2025-04-18,high,,,,,Adam Glass,Michael Frendo,Sumit Dhawan
+Nikhil Shetty,nshetty@proofpoint.com,active,21.43,2024-11-09,2025-04-18,high,,,Jim Salter,Satya Jena,John Abel,Remi Thomas,Sumit Dhawan
+Kahra Atalig,katalig@proofpoint.com,active,21.38,2024-12-21,2025-04-25,high,,,Jose Padilla,Frank Aneiros,Kevin Epstein,Rohit Dixit,Sumit Dhawan
+Tal Shneerson,tshneerson@proofpoint.com,inactive,21.25,2024-11-16,2025-03-07,high,,,Or Lindner,Meny Duek,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Stephanie Karbo,skarbo@proofpoint.com,active,20.83,2025-03-01,2025-04-25,high,,,Ernest Childs,Denise Harlan,Brad Hargrave,Blake Salle,Sumit Dhawan
+Sebastian Rossi,srossi@proofpoint.com,active,20.57,2025-03-01,2025-04-18,high,,,,Constanza Herrera Varela,Shreya Patel,Sonia Zuno,Sumit Dhawan
+Brad Hargrave,bhargrave@proofpoint.com,active,20.33,2025-02-22,2025-04-25,high,,,,,,Blake Salle,Sumit Dhawan
+Dan Murphy,danmurphy@proofpoint.com,active,20.3,2025-02-15,2025-04-25,high,,,,Raphael Durand,Boi-Yeanoh Adams,Kim Sullivan,Sumit Dhawan
+Altamash Rafiq,arafiq@proofpoint.com,active,19.85,2024-11-16,2025-04-25,medium,,,Ryan Skinner,Mike Jones,Dan Rapp,Michael Frendo,Sumit Dhawan
+Frederick Tran,ftran@proofpoint.com,active,19.8,2025-03-15,2025-04-25,medium,,,Jeff Mai,Anthony Corniffe,Elizabeth Karbo,Remi Thomas,Sumit Dhawan
+Colby Leclerc,cleclerc@proofpoint.com,active,19.75,2025-03-01,2025-04-25,medium,,Aidan O'Herlihy,Ronan O'Suilleabhain,Nandak Venkatesan,Harry Labana,Mayank Choudhary,Sumit Dhawan
+Leszek Taratuta,ltaratuta@proofpoint.com,active,19.67,2025-03-01,2025-04-25,medium,,Victoria Luchian,Phil Barlow,Jeremiah Ness,Harry Labana,Mayank Choudhary,Sumit Dhawan
+Mohammed Mozumder,mmozumder@proofpoint.com,active,19.6,2025-01-11,2025-04-25,medium,,,Carey Klenetsky,Vonn Marsch,Angela Knox,Michael Frendo,Sumit Dhawan
+Sudhir Mishra,smishra@proofpoint.com,active,19.59,2024-11-30,2025-04-25,medium,,Pretha Thomas,Jun Wang,Angelo Starink,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Asaf Sade,asade@proofpoint.com,inactive,19.19,2024-11-16,2025-03-07,medium,,Tal Shneerson,Or Lindner,Meny Duek,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Guy Tubi,gtubi@proofpoint.com,active,19.0,2025-03-01,2025-04-25,medium,,Shai Yemini,Nir Laufer,Meny Duek,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Ludvik Jerabek,ljerabek@proofpoint.com,inactive,18.67,2025-02-15,2025-03-07,medium,,Ed Buck,Lee Rothman,Ron Poserina,Nate Chessin,Blake Salle,Sumit Dhawan
+Joaquin Senn,jsenn@proofpoint.com,active,18.45,2025-02-08,2025-04-25,medium,,,,Bernardo Fourcade,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Dor Melamed,dmelamed@proofpoint.com,active,18.38,2025-03-01,2025-04-25,medium,,,Kobi Mualem (קובי מועלם),Shlomi Shor (שלומי שור),Tal Tikotzki,Mayank Choudhary,Sumit Dhawan
+Ryan Shaw,ryshaw@proofpoint.com,inactive,18.33,2024-11-02,2024-11-22,medium,,Vernon Blakes,Warren Nagatani,Amy Crum,Chris Danyo,Blake Salle,Sumit Dhawan
+Alan Randolph,arandolph@proofpoint.com,active,18.14,2024-11-09,2025-04-25,medium,,,,Stephen Nosek,Linda Lazzareschi,Rohit Dixit,Sumit Dhawan
+Mani Klein,mklein@proofpoint.com,inactive,18.0,2025-03-01,2025-03-07,medium,,,Yossi Tamarov,Meny Duek,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Debra Kladis,dkladis@proofpoint.com,active,18.0,2025-03-15,2025-04-18,medium,,,,,Brad Hargrave,Blake Salle,Sumit Dhawan
+Eugenia Corthey,mcorthey@proofpoint.com,active,17.5,2025-02-15,2025-04-18,medium,,,,Constanza Herrera Varela,Shreya Patel,Sonia Zuno,Sumit Dhawan
+Anna Epperson,aepperson@proofpoint.com,active,17.5,2024-11-16,2025-04-25,medium,,Hilary Henderson,Satya Jena,Satya Jena,John Abel,Remi Thomas,Sumit Dhawan
+John Flood,jflood@proofpoint.com,active,17.46,2025-01-25,2025-04-25,medium,,,,Pablo Passera,Rengabashyam Srinivas,Darren Lee,Sumit Dhawan
+Or Lindner,olindner@proofpoint.com,inactive,17.33,2024-11-23,2025-03-07,medium,,,,Meny Duek,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Ben Zecharia,bzecharia@proofpoint.com,active,17.25,2025-03-01,2025-04-25,medium,,,,Shlomi Shor (שלומי שור),Tal Tikotzki,Mayank Choudhary,Sumit Dhawan
+Svetoslav Savchev,ssavchev@proofpoint.com,active,17.14,2025-03-08,2025-04-25,medium,,Diana Sutandie,Greg Robinson,Jeremiah Ness,Harry Labana,Mayank Choudhary,Sumit Dhawan
+Lea Zamel,lzamel@proofpoint.com,inactive,17.0,2024-12-21,2025-02-28,medium,,,Or Lindner,Meny Duek,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Hemal Shah,heshah@proofpoint.com,active,16.86,2025-03-01,2025-04-18,medium,,,,Khurram Ghafoor,Alex Kremer,Mayank Choudhary,Sumit Dhawan
+Steven Williamson (Essentials),stwilliamson@proofpoint.com,active,16.8,2025-02-08,2025-04-25,medium,,,Paul Gregg,John Bakewell,Thomas Keating,Michael Frendo,Sumit Dhawan
+Chris Lea,clea@proofpoint.com,active,16.0,2025-04-12,2025-04-25,medium,,Phil Pursino,Kevin Barry,Robert Hurstak,Chris Danyo,Blake Salle,Sumit Dhawan
+Pramank Bali,pbali@proofpoint.com,active,15.83,2025-03-15,2025-04-25,medium,,Pretha Thomas,Jun Wang,Angelo Starink,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Dante Giadone,dgiadone@proofpoint.com,active,15.62,2025-02-08,2025-04-25,medium,,Davin Stilson,Erin Leonard,Rob Randell,Nate Chessin,Blake Salle,Sumit Dhawan
+Lior Krispin,lkrispin@proofpoint.com,inactive,15.57,2024-11-30,2025-03-07,medium,,Tal Shneerson,Or Lindner,Meny Duek,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Rachel Saar,rsagir@proofpoint.com,active,15.5,2024-11-09,2025-04-18,medium,,,,,Shreya Patel,Sonia Zuno,Sumit Dhawan
+Dhananjay Kumar,dhakumar@proofpoint.com,active,15.3,2024-11-02,2025-04-18,medium,,,Michael Pitusi (מיכאל פיטוסי),Itzik Zandok,Tal Tikotzki,Mayank Choudhary,Sumit Dhawan
+Omer Karpas,okarpas@proofpoint.com,active,15.25,2025-03-01,2025-04-25,medium,,,Kobi Mualem (קובי מועלם),Shlomi Shor (שלומי שור),Tal Tikotzki,Mayank Choudhary,Sumit Dhawan
+Andres Luis labo,aluislabo@proofpoint.com,active,15.2,2024-11-09,2025-04-25,medium,,,,Constanza Herrera Varela,Shreya Patel,Sonia Zuno,Sumit Dhawan
+Vinay Pathak,vpathak@proofpoint.com,active,15.17,2024-12-14,2025-03-14,medium,,Pretha Thomas,Jun Wang,Angelo Starink,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Moshe Kamer,mkamer@proofpoint.com,inactive,15.0,2024-11-09,2024-11-15,medium,,,Yossi Tamarov,Meny Duek,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Cynthia Okeeffe,cokeeffe@proofpoint.com,active,15.0,2025-03-01,2025-04-25,medium,,,,,,Kim Sullivan,Sumit Dhawan
+Darren Lee,dlee@proofpoint.com,active,14.68,2024-11-09,2025-04-18,medium,,,,,,,Sumit Dhawan
+Claire Lucey,cllucey@proofpoint.com,active,14.33,2024-11-30,2025-03-28,medium,,,,Steve Langone,Elizabeth Karbo,Remi Thomas,Sumit Dhawan
+Robert Weitershausen,rweitershausen@proofpoint.com,active,14.25,2024-11-09,2025-04-25,medium,,,,,John Abel,Remi Thomas,Sumit Dhawan
+John Pepe,jpepe@proofpoint.com,inactive,14.2,2025-02-01,2025-03-07,medium,,,,,Harry Labana,Mayank Choudhary,Sumit Dhawan
+Kurt Wescoe,kwescoe@proofpoint.com,active,14.0,2024-11-09,2025-04-25,medium,,,,,Karen Letain,Darren Lee,Sumit Dhawan
+Anne Marie Romero,aromero@proofpoint.com,active,13.81,2024-11-16,2025-04-25,medium,,,,,Shreya Patel,Sonia Zuno,Sumit Dhawan
+Cristian Fiorentino,cfiorentino@proofpoint.com,active,13.53,2024-12-07,2025-04-25,medium,,,,Bernardo Fourcade,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Deepak Michael,dmichael@proofpoint.com,active,13.33,2025-03-08,2025-04-25,medium,,Dave Campbell,Greg Robinson,Jeremiah Ness,Harry Labana,Mayank Choudhary,Sumit Dhawan
+Crista Nunez,cnunez@proofpoint.com,active,13.25,2025-03-01,2025-04-25,medium,,,,,Oscar Yepez,Mayank Choudhary,Sumit Dhawan
+Yael Weizer,yweizer@proofpoint.com,inactive,13.2,2024-11-23,2025-03-07,medium,,,Or Lindner,Meny Duek,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Vishvesh Deshmukh,vdeshmukh@proofpoint.com,active,13.12,2025-02-01,2025-04-25,medium,,Chetan Gautam,Anthony Dorie,Ramesh Pidikiti,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Brian Sator,bsator@proofpoint.com,active,13.0,2025-02-08,2025-04-25,medium,,,Deb Briggs,Bernardo Fourcade,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Veronica Goldenhersch,vgoldenhersch@proofpoint.com,active,13.0,2025-04-19,2025-04-25,medium,,,,,,,
+Jim Canfield,jcanfield@proofpoint.com,active,12.82,2024-11-09,2025-04-25,medium,,,,Kenneth Khouri,Kevin Epstein,Rohit Dixit,Sumit Dhawan
+Andre Turgeon,aturgeon@proofpoint.com,active,12.82,2024-11-09,2025-04-25,medium,,,,Mike Jones,Dan Rapp,Michael Frendo,Sumit Dhawan
+Jason Maddock,jmaddock@proofpoint.com,inactive,12.75,2024-11-02,2024-11-29,medium,,David Barham,Edward Bishop,Edward Bishop,Timothy Sadler,Darren Lee,Sumit Dhawan
+Ankita Mehta,anmehta@proofpoint.com,active,12.57,2024-11-09,2025-04-25,medium,,,,,Shreya Patel,Sonia Zuno,Sumit Dhawan
+Romina Barberis,rbarberis@proofpoint.com,active,12.56,2025-02-15,2025-04-25,medium,,,,Constanza Herrera Varela,Shreya Patel,Sonia Zuno,Sumit Dhawan
+David Ray,dray@proofpoint.com,active,12.5,2025-04-12,2025-04-25,medium,,,Kevin Butler,Robert Hurstak,Chris Danyo,Blake Salle,Sumit Dhawan
+Paul McKernon,pmckernon@proofpoint.com,active,12.0,2025-04-19,2025-04-25,medium,,,Kuldeep Deshwal,Prema Ramasamy,Dan Rapp,Michael Frendo,Sumit Dhawan
+Tom Kretzschmar,tkretzschmar@proofpoint.com,inactive,12.0,2024-11-16,2025-03-21,medium,,,Oliver Karow,Jon Parkes,Nate Chessin,Blake Salle,Sumit Dhawan
+Vivianne Sneep,vsneep@proofpoint.com,active,11.83,2025-03-15,2025-04-25,medium,,Anca Titu,Jason Lopes,Anthony Corniffe,Elizabeth Karbo,Remi Thomas,Sumit Dhawan
+Anand Somani,asomani@proofpoint.com,active,11.82,2024-11-09,2025-04-18,medium,,,,Anand Somani,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Frank Aneiros,faneiros@proofpoint.com,active,11.79,2024-11-30,2025-04-25,medium,,,,Frank Aneiros,Kevin Epstein,Rohit Dixit,Sumit Dhawan
+Mariano Cilia,mcilia@proofpoint.com,active,11.75,2024-11-09,2025-03-14,medium,,,,,,Michael Frendo,Sumit Dhawan
+Anushka Arya,aarya@proofpoint.com,active,11.75,2025-03-01,2025-04-25,medium,,,,Shelby Parker,Terri West,Kim Sullivan,Sumit Dhawan
+Tadhg O'Sullivan,taosullivan@proofpoint.com,active,11.73,2024-11-09,2025-04-18,medium,,,,,Mike Hickman,Remi Thomas,Sumit Dhawan
+Julie Jensen,jujensen@proofpoint.com,active,11.67,2025-04-05,2025-04-25,medium,,,,Jeffrey Reed,Kyle Chin,Remi Thomas,Sumit Dhawan
+Raphael Durand,rdurand@proofpoint.com,active,11.56,2025-02-15,2025-04-18,medium,,,,,Boi-Yeanoh Adams,Kim Sullivan,Sumit Dhawan
+Srikant Reddi,sreddi@proofpoint.com,active,11.5,2025-02-01,2025-03-28,medium,,,,,Kevin Epstein,Rohit Dixit,Sumit Dhawan
+Ernest Childs,echilds@proofpoint.com,active,11.5,2025-03-08,2025-04-25,medium,,,,Denise Harlan,Brad Hargrave,Blake Salle,Sumit Dhawan
+Angelo Starink,astarink@proofpoint.com,active,11.38,2025-01-11,2025-04-25,medium,,,,,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Paul Gregg,pgregg@proofpoint.com,active,11.25,2024-11-09,2025-04-25,medium,,,,John Bakewell,Thomas Keating,Michael Frendo,Sumit Dhawan
+Raju Manthena,rmanthena@proofpoint.com,active,11.23,2024-11-09,2025-04-18,medium,,,,,Angela Knox,Michael Frendo,Sumit Dhawan
+Jennifer Duffourg,jduffourg@proofpoint.com,active,11.2,2024-11-16,2025-04-25,medium,,,,Estelle Derouet,Elia Mak,Ryan Kalember,Sumit Dhawan
+Yoel Calderon,ycalderon@proofpoint.com,active,11.16,2024-11-30,2025-04-25,medium,,,,,Rick Dales,Mayank Choudhary,Sumit Dhawan
+Gregory Shapiro,gshapiro@proofpoint.com,inactive,11.14,2024-11-30,2025-01-31,medium,,,,,,Michael Frendo,Sumit Dhawan
+Matthew Lauritzen,mlauritzen@proofpoint.com,active,11.1,2024-11-09,2025-04-25,medium,,,,,Mike Hickman,Remi Thomas,Sumit Dhawan
+Charlene Robertson,crobertson@proofpoint.com,active,11.0,2025-03-15,2025-03-21,medium,,,,,Boi-Yeanoh Adams,Kim Sullivan,Sumit Dhawan
+Miran Kurt,mkurt@proofpoint.com,active,11.0,2025-04-19,2025-04-25,medium,,,Tuni Baraka,Stephen Dossett,Kent Breaux,Blake Salle,Sumit Dhawan
+Thuy Nguyen,thunguyen@proofpoint.com,inactive,10.92,2024-11-09,2025-02-07,medium,,,Greg Eagle Sahagun,Srikant Reddi,Kevin Epstein,Rohit Dixit,Sumit Dhawan
+Angela Knox,aknox@proofpoint.com,active,10.91,2024-11-09,2025-04-25,medium,,,,,,Michael Frendo,Sumit Dhawan
+Daniel Jackson,djackson@proofpoint.com,active,10.7,2025-02-08,2025-04-25,medium,,,Rimma Mikheleva,Bernardo Fourcade,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Doug Dexter,ddexter@proofpoint.com,inactive,10.6,2024-11-02,2025-02-28,medium,,,,Ben McLaughlin,John Abel,Remi Thomas,Sumit Dhawan
+Doni Merkushin,dmerkushin@proofpoint.com,inactive,10.57,2025-01-11,2025-03-07,medium,,,,Itay Nachum,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Rob Mixer,rmixer@proofpoint.com,active,10.55,2024-11-09,2025-04-25,medium,,,,Ben McLaughlin,John Abel,Remi Thomas,Sumit Dhawan
+Mayank Choudhary,mchoudhary@proofpoint.com,active,10.5,2024-11-02,2025-04-18,medium,,,,,,,Sumit Dhawan
+Hanoch Shayevitz,hshayevitz@proofpoint.com,active,10.5,2025-03-15,2025-04-25,medium,,Yehudit Glass,Moshe Azulay,Meny Duek,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Felix Vetsper,fvetsper@proofpoint.com,inactive,10.33,2025-03-01,2025-03-21,medium,,,Roey Kosovski,Shlomi Shor (שלומי שור),Tal Tikotzki,Mayank Choudhary,Sumit Dhawan
+Boston Lee,bolee@proofpoint.com,active,10.23,2024-11-09,2025-04-18,medium,,,Ryan Skinner,Mike Jones,Dan Rapp,Michael Frendo,Sumit Dhawan
+Igor Enenberg,ienenberg@proofpoint.com,active,10.14,2025-03-08,2025-04-25,medium,,,Moshe Azulay,Meny Duek,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Marcelo Da cruz pinto,mdacruzpinto@proofpoint.com,active,10.11,2024-11-16,2025-04-25,medium,,,,Pablo Abian,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Kylie Johnson,kyljohnson@proofpoint.com,active,10.11,2024-11-09,2025-04-25,medium,,,Brayden Winterton,Mike Jones,Dan Rapp,Michael Frendo,Sumit Dhawan
+Adam Glass,aglass@proofpoint.com,active,10.1,2025-02-15,2025-04-25,medium,,,,,,Michael Frendo,Sumit Dhawan
+Divya Viswanath,dviswanath@proofpoint.com,active,10.0,2025-04-12,2025-04-18,medium,,,Jason Le,Mark Cassidy,John Abel,Remi Thomas,Sumit Dhawan
+Katie Peeler,kpeeler@proofpoint.com,active,10.0,2025-04-12,2025-04-18,medium,,,Matt Cross,Neal Lillywhite,Kent Breaux,Blake Salle,Sumit Dhawan
+Jordan Smith,josmith@proofpoint.com,active,10.0,2025-04-12,2025-04-25,medium,,,Henry Gorst,Eric Stoffer,Nitza Daniel,Blake Salle,Sumit Dhawan
+Mike Olden,molden@proofpoint.com,active,10.0,2024-11-30,2025-04-04,medium,,,Jessica Greer,Justin Collins,Linda Lazzareschi,Rohit Dixit,Sumit Dhawan
+Shoshana Horen,shoren@proofpoint.com,inactive,10.0,2024-12-07,2024-12-13,medium,,,Or Lindner,Meny Duek,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Olivia He,ohe@proofpoint.com,inactive,10.0,2024-11-30,2025-03-07,medium,,,,Joe Schwartz,Vincent Merlin,Blake Salle,Sumit Dhawan
+Michael Lindsay,milindsay@proofpoint.com,active,10.0,2025-02-22,2025-04-18,medium,,,Richard Shaw,John Bakewell,Thomas Keating,Michael Frendo,Sumit Dhawan
+Asaf Keidar,akeidar@proofpoint.com,active,9.83,2025-03-01,2025-04-18,medium,,,,Olivier Couque,Alex Kremer,Mayank Choudhary,Sumit Dhawan
+Randy Pargman,rpargman@proofpoint.com,active,9.82,2024-11-09,2025-04-25,medium,,,,,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Jason Cronquist,jcronquist@proofpoint.com,active,9.76,2024-11-09,2025-04-25,medium,,,Ryan Skinner,Mike Jones,Dan Rapp,Michael Frendo,Sumit Dhawan
+Cynthia Herrera,cyherrera@proofpoint.com,active,9.73,2024-12-07,2025-04-25,medium,,,,Debra Kladis,Brad Hargrave,Blake Salle,Sumit Dhawan
+Anna Martorana,amartorana@proofpoint.com,active,9.5,2025-02-22,2025-04-18,medium,,,,,,Kim Sullivan,Sumit Dhawan
+Sam Fogel,sfogel@proofpoint.com,active,9.5,2025-04-12,2025-04-25,medium,,,John MacNeill,Michelle Owczarzak,Chris Danyo,Blake Salle,Sumit Dhawan
+Mahendra Rekapally,mrekapally@proofpoint.com,active,9.43,2025-02-15,2025-04-25,medium,,Dave Gupta,Deb Briggs,Bernardo Fourcade,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Spencer Warner,swarner@proofpoint.com,active,9.38,2025-01-25,2025-04-04,medium,,,David Valentine,JP Dinh,John Abel,Remi Thomas,Sumit Dhawan
+Justin Trant,jtrant@proofpoint.com,inactive,9.25,2025-01-11,2025-04-11,medium,,,David Valentine,JP Dinh,John Abel,Remi Thomas,Sumit Dhawan
+David Woodruff,dwoodruff@proofpoint.com,active,9.14,2024-11-09,2025-04-25,medium,,,,Mike Jones,Dan Rapp,Michael Frendo,Sumit Dhawan
+Cristina Albu,calbu@proofpoint.com,active,9.11,2025-02-22,2025-04-25,medium,,,,,Cynthia O'Keeffe,Kim Sullivan,Sumit Dhawan
+Brayden Winterton,bwinterton@proofpoint.com,active,9.07,2024-11-09,2025-04-25,medium,,,,Mike Jones,Dan Rapp,Michael Frendo,Sumit Dhawan
+Kouroosh Roshan,kroshan@proofpoint.com,active,9.0,2025-04-12,2025-04-25,medium,,,Domenico Maiuri,Eric Stoffer,Nitza Daniel,Blake Salle,Sumit Dhawan
+Mike Schenck,mschenck@proofpoint.com,active,9.0,2025-04-12,2025-04-18,medium,,,Jim Doran,Eric Stoffer,Nitza Daniel,Blake Salle,Sumit Dhawan
+Richard Armstrong,riarmstrong@proofpoint.com,inactive,8.92,2024-11-09,2025-03-21,medium,,,,Keven Mabey,Nate Chessin,Blake Salle,Sumit Dhawan
+Shelley Farr,sfarr@proofpoint.com,active,8.83,2025-03-01,2025-04-11,medium,,,,,Marcus Raney,Kim Sullivan,Sumit Dhawan
+Wei Sun,wsun@proofpoint.com,active,8.8,2025-01-18,2025-04-25,medium,,,,Prema Ramasamy,Dan Rapp,Michael Frendo,Sumit Dhawan
+Paul King,pking@proofpoint.com,active,8.78,2025-01-25,2025-04-25,medium,,,,Angelo Starink,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Jose Padilla,jpadilla@proofpoint.com,active,8.6,2024-12-07,2025-04-18,medium,,,,Frank Aneiros,Kevin Epstein,Rohit Dixit,Sumit Dhawan
+Pankaj Patil,papatil@proofpoint.com,active,8.5,2024-11-09,2025-04-04,medium,,,Satya Jena,Satya Jena,John Abel,Remi Thomas,Sumit Dhawan
+Terri West,twest@proofpoint.com,active,8.5,2025-02-22,2025-04-25,medium,,,,,,Kim Sullivan,Sumit Dhawan
+Snehal Patel,snpatel@proofpoint.com,active,8.43,2025-03-08,2025-04-25,medium,,,Ronan O'Suilleabhain,Nandak Venkatesan,Harry Labana,Mayank Choudhary,Sumit Dhawan
+Aaron Nascimento,anascimento@proofpoint.com,inactive,8.33,2025-01-25,2025-02-14,medium,,,,Carl Tuttle,Adam Glass,Michael Frendo,Sumit Dhawan
+Dewayne Greer,dgreer@proofpoint.com,inactive,8.25,2024-12-07,2025-01-17,medium,,,,Ben McLaughlin,John Abel,Remi Thomas,Sumit Dhawan
+Ben McLaughlin,benmclaughlin@proofpoint.com,active,8.25,2025-01-11,2025-04-11,medium,,,,Ben McLaughlin,John Abel,Remi Thomas,Sumit Dhawan
+Kenneth Khouri,kkhouri@proofpoint.com,active,8.2,2025-03-08,2025-04-25,medium,,,,,Kevin Epstein,Rohit Dixit,Sumit Dhawan
+Jack McCabe,jamccabe@proofpoint.com,active,8.18,2024-11-16,2025-04-25,medium,,Hannah Rapetti,Ann Reigelman,Kenneth Khouri,Kevin Epstein,Rohit Dixit,Sumit Dhawan
+Hemang Nadkarni,hnadkarni@proofpoint.com,active,8.11,2024-11-09,2025-04-18,medium,,,,,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Chetan Gautam,cgautam@proofpoint.com,active,8.08,2025-01-25,2025-04-25,medium,,,Anthony Dorie,Ramesh Pidikiti,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Ryan Kalember,rkalember@proofpoint.com,active,8.0,2025-02-15,2025-04-25,medium,,,,,,,Sumit Dhawan
+Alan Wessman,awessman@proofpoint.com,inactive,8.0,2024-11-09,2024-11-15,medium,,,Ryan Skinner,Mike Jones,Dan Rapp,Michael Frendo,Sumit Dhawan
+Jeff Duncan,jduncan@proofpoint.com,active,8.0,2024-11-09,2025-04-11,medium,Jaren Angerbauer,Peter Swisher,Shaiju Sacaria,Molly Bissell,Linda Lazzareschi,Rohit Dixit,Sumit Dhawan
+Joshua Lakmaker,jlakmaker@proofpoint.com,active,8.0,2025-04-12,2025-04-18,medium,,,Brian Jamba,Crispin Kerr,George Lee,Blake Salle,Sumit Dhawan
+Kristopher Boren,kboren@proofpoint.com,active,7.75,2025-02-08,2025-04-25,medium,,,Paul King,Angelo Starink,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Peter Kelly,pkelly@proofpoint.com,active,7.73,2024-11-09,2025-04-25,medium,,,,Riaan Kok,Thomas Keating,Michael Frendo,Sumit Dhawan
+Kat Kyriakidis,kkyriakidis@proofpoint.com,active,7.72,2024-11-30,2025-04-25,medium,,Hilary Henderson,Satya Jena,Satya Jena,John Abel,Remi Thomas,Sumit Dhawan
+Vonn Marsch,vmarsch@proofpoint.com,active,7.7,2024-11-09,2025-04-25,medium,,,,Vonn Marsch,Angela Knox,Michael Frendo,Sumit Dhawan
+Dafna Paz,dpaz@proofpoint.com,active,7.67,2025-02-15,2025-04-25,medium,,,,Yoel Calderon,Rick Dales,Mayank Choudhary,Sumit Dhawan
+Simon Alman,salman@proofpoint.com,inactive,7.33,2024-11-23,2025-02-28,medium,,,,Carl Tuttle,Adam Glass,Michael Frendo,Sumit Dhawan
+Nir Shneor,nshneor@proofpoint.com,active,7.33,2025-03-22,2025-04-25,medium,,,,Shlomi Shor (שלומי שור),Tal Tikotzki,Mayank Choudhary,Sumit Dhawan
+Casey Gragg,cchadwell@proofpoint.com,active,7.25,2025-01-11,2025-04-11,medium,,,Jim Salter,Satya Jena,John Abel,Remi Thomas,Sumit Dhawan
+Estelle Derouet,ederouet@proofpoint.com,active,7.12,2024-11-30,2025-04-25,medium,,,,,Elia Mak,Ryan Kalember,Sumit Dhawan
+Daniel Morris,dmorris@proofpoint.com,active,7.11,2024-11-09,2025-04-25,medium,,,,,Mike Hickman,Remi Thomas,Sumit Dhawan
+Anthony Dorie,adorie@proofpoint.com,active,7.08,2024-11-30,2025-04-25,medium,,,,Ramesh Pidikiti,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Shai Yemini,syemini@proofpoint.com,active,6.58,2024-11-02,2025-04-25,medium,,,Nir Laufer,Meny Duek,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Ryan Skinner,rskinner@proofpoint.com,active,6.5,2024-11-30,2025-03-28,medium,,,,Mike Jones,Dan Rapp,Michael Frendo,Sumit Dhawan
+Allan Neill,aneill@proofpoint.com,inactive,6.33,2024-11-02,2024-11-29,medium,,,,Wayne Nelson,Alex Kremer,Mayank Choudhary,Sumit Dhawan
+Eric Smith,ersmith@proofpoint.com,active,6.29,2025-03-08,2025-04-25,medium,,,,Kiran Kumar,Alex Kremer,Mayank Choudhary,Sumit Dhawan
+Gargi Chopra,gchopra@proofpoint.com,active,6.29,2025-03-01,2025-04-25,medium,,,,Jeffrey Reed,Kyle Chin,Remi Thomas,Sumit Dhawan
+Idan Naim,inaim@proofpoint.com,active,6.17,2025-03-08,2025-04-25,medium,,,,Shlomi Shor (שלומי שור),Tal Tikotzki,Mayank Choudhary,Sumit Dhawan
+Scott Roberts,scroberts@proofpoint.com,active,6.14,2024-11-09,2025-04-11,medium,,,,JP Dinh,John Abel,Remi Thomas,Sumit Dhawan
+Michelle Gradwohl,mgradwohl@proofpoint.com,inactive,6.0,2024-11-02,2024-11-22,medium,,Vernon Blakes,Warren Nagatani,Amy Crum,Chris Danyo,Blake Salle,Sumit Dhawan
+Natalie Marquez,nyoung@proofpoint.com,active,6.0,2025-04-12,2025-04-18,medium,,Michael Grassi,Keith Taylor,Amy Crum,Chris Danyo,Blake Salle,Sumit Dhawan
+Yigal Tats,ytats@proofpoint.com,inactive,6.0,2025-03-08,2025-03-21,medium,,,Sveta Sitruk,Itzik Zandok,Tal Tikotzki,Mayank Choudhary,Sumit Dhawan
+Sophia George,sogeorge@proofpoint.com,active,5.93,2025-01-11,2025-04-25,medium,,,,Constanza Herrera Varela,Shreya Patel,Sonia Zuno,Sumit Dhawan
+Raghavendran Hanumantharau,rhanumantharau@proofpoint.com,active,5.83,2025-03-08,2025-04-18,medium,,,Raghavendran Hanumantharau,Ben McLaughlin,John Abel,Remi Thomas,Sumit Dhawan
+Trevor Ahmedali,tahmedali@proofpoint.com,active,5.8,2025-03-01,2025-04-25,medium,,,Vinit Adhopia,Nandak Venkatesan,Harry Labana,Mayank Choudhary,Sumit Dhawan
+Donna Marks,dmarks@proofpoint.com,active,5.75,2025-02-15,2025-04-25,medium,,,,,,Kim Sullivan,Sumit Dhawan
+Elad Shechter,eshechter@proofpoint.com,active,5.64,2025-01-04,2025-04-25,medium,,,Yossi Tamarov,Meny Duek,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+David Valentine,dvalentine@proofpoint.com,active,5.62,2024-11-02,2025-04-18,medium,,,,JP Dinh,John Abel,Remi Thomas,Sumit Dhawan
+Curtis Cowan,ccowan@proofpoint.com,active,5.6,2025-02-22,2025-04-18,medium,,,Michael Millar,John Bakewell,Thomas Keating,Michael Frendo,Sumit Dhawan
+Kristi Gee,kgee@proofpoint.com,active,5.53,2024-11-30,2025-04-25,medium,,,,Estelle Derouet,Elia Mak,Ryan Kalember,Sumit Dhawan
+Oleg Rakhmanchik,orakhmanchik@proofpoint.com,inactive,5.5,2025-01-25,2025-03-07,medium,,,Raghavendran Hanumantharau,Ben McLaughlin,John Abel,Remi Thomas,Sumit Dhawan
+Shruthi Nagalapura Raghava,sraghava@proofpoint.com,active,5.5,2025-01-25,2025-04-25,medium,,,,Constanza Herrera Varela,Shreya Patel,Sonia Zuno,Sumit Dhawan
+Carter Waxman,cwaxman@proofpoint.com,active,5.44,2024-11-30,2025-04-25,medium,,,,Randy Pargman,Mariano Cilia,Michael Frendo,Sumit Dhawan
+John Abel,joabel@proofpoint.com,active,5.4,2024-11-09,2025-04-25,medium,,,,,,Remi Thomas,Sumit Dhawan
+Greg Colburn,gcolburn@proofpoint.com,active,5.25,2024-11-02,2025-04-18,medium,,,,,Robert Holmes,Darren Lee,Sumit Dhawan
+Michael Frendo,mfrendo@proofpoint.com,active,5.17,2025-01-25,2025-04-18,medium,,,,,,,Sumit Dhawan
+Leslie Miller,lmiller@proofpoint.com,active,5.1,2024-11-30,2025-04-25,medium,,,,,Linda Lazzareschi,Rohit Dixit,Sumit Dhawan
+Amélie de Braux,adebraux@proofpoint.com,active,5.0,2025-03-01,2025-03-28,low,,,,Michelle Freno,Kyle Chin,Remi Thomas,Sumit Dhawan
+Joe Monaghan,jmonaghan@proofpoint.com,active,5.0,2025-04-19,2025-04-25,low,,,Anand Somani,Anand Somani,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Amy Hoang,ahoang@proofpoint.com,active,5.0,2025-02-08,2025-04-18,low,,,,Robert Weitershausen,John Abel,Remi Thomas,Sumit Dhawan
+Kim Sullivan,kisullivan@proofpoint.com,active,5.0,2025-03-01,2025-04-25,low,,,,,,,Sumit Dhawan
+Michael Fox,micfox@proofpoint.com,active,5.0,2025-03-08,2025-03-14,low,,,,Denise Harlan,Brad Hargrave,Blake Salle,Sumit Dhawan
+Jenny Wu,jewu@proofpoint.com,inactive,5.0,2024-11-02,2024-11-15,low,,,Jordan Laljiani,Cristina Albu,Cynthia O'Keeffe,Kim Sullivan,Sumit Dhawan
+Brent Maxwell,bmaxwell@proofpoint.com,active,5.0,2024-11-02,2025-03-21,low,,,,,,Rohit Dixit,Sumit Dhawan
+Josephine Choi,jochoi@proofpoint.com,active,5.0,2024-11-09,2025-04-18,low,,,,,Rengabashyam Srinivas,Darren Lee,Sumit Dhawan
+Ram Kulathumani,rkulathumani@proofpoint.com,inactive,5.0,2025-02-15,2025-03-07,low,,,,Khurram Ghafoor,Alex Kremer,Mayank Choudhary,Sumit Dhawan
+Melanie Burns,mburns@proofpoint.com,active,5.0,2025-04-19,2025-04-25,low,,,Todd Doiron,Ryan Sullivan,Chris Danyo,Blake Salle,Sumit Dhawan
+Scott Blomquist,sblomquist@proofpoint.com,active,5.0,2024-11-09,2024-11-15,low,,Spencer Warner,David Valentine,JP Dinh,John Abel,Remi Thomas,Sumit Dhawan
+Anna Mills,amills@proofpoint.com,inactive,5.0,2025-01-18,2025-01-24,low,,,,Debra Kladis,Brad Hargrave,Blake Salle,Sumit Dhawan
+Marthina Rodriguez,mrodriguez@proofpoint.com,inactive,4.5,2024-11-09,2024-11-29,low,Michael Crane,Chris Lott,Lance Swarbrick,JP Dinh,John Abel,Remi Thomas,Sumit Dhawan
+Natalie Abbatacola,nabbatacola@proofpoint.com,active,4.5,2025-02-15,2025-03-07,low,,,,,,Kim Sullivan,Sumit Dhawan
+Olivier Couque,ocouque@proofpoint.com,inactive,4.45,2024-11-16,2025-02-28,low,,,,,Alex Kremer,Mayank Choudhary,Sumit Dhawan
+Nathan Chessin,nchessin@proofpoint.com,active,4.42,2024-11-09,2025-03-28,low,,,,,,Blake Salle,Sumit Dhawan
+Nandak Venkatesan,nvenkatesan@proofpoint.com,active,4.38,2025-02-08,2025-04-25,low,,,,,Harry Labana,Mayank Choudhary,Sumit Dhawan
+Deepak Dhankhar,ddhankhar@proofpoint.com,inactive,4.3,2024-11-09,2025-02-21,low,,,,,,,
+Maximiliano Cruz,mcruz@proofpoint.com,active,4.14,2025-02-08,2025-04-04,low,,Sean Butler,Rimma Mikheleva,Bernardo Fourcade,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Jeff Reed,jereed@proofpoint.com,active,4.0,2025-03-08,2025-04-18,low,,,,,Kyle Chin,Remi Thomas,Sumit Dhawan
+Guy Sela,gsela@proofpoint.com,inactive,4.0,2025-01-25,2025-02-07,low,,,Nir Shneor,Shlomi Shor (שלומי שור),Tal Tikotzki,Mayank Choudhary,Sumit Dhawan
+JP Dinh,jdinh@proofpoint.com,active,4.0,2024-11-09,2025-04-11,low,,,,,John Abel,Remi Thomas,Sumit Dhawan
+Tim Choi,tchoi@proofpoint.com,active,4.0,2025-03-22,2025-04-25,low,,,,,,Ryan Kalember,Sumit Dhawan
+Michael Leung,mleung@proofpoint.com,inactive,4.0,2025-03-08,2025-03-14,low,,,,Denise Harlan,Brad Hargrave,Blake Salle,Sumit Dhawan
+Erich Anderson,eanderson@proofpoint.com,active,4.0,2025-01-04,2025-03-28,low,,,,Frank Aneiros,Kevin Epstein,Rohit Dixit,Sumit Dhawan
+Rachit Sood,rsood@proofpoint.com,inactive,4.0,2024-11-09,2025-03-07,low,,Raghavendran Hanumantharau,Raghavendran Hanumantharau,Ben McLaughlin,John Abel,Remi Thomas,Sumit Dhawan
+Tom Keating,tkeating@proofpoint.com,active,4.0,2024-11-23,2025-04-18,low,,,,,,Michael Frendo,Sumit Dhawan
+Hakeem Ladejobi,hladejobi@proofpoint.com,inactive,4.0,2024-11-09,2024-11-22,low,Michael Church,Dennis Mnuskin,Edward Bishop,Edward Bishop,Timothy Sadler,Darren Lee,Sumit Dhawan
+Richard Harrison,rharrison@proofpoint.com,inactive,3.5,2024-11-16,2024-11-29,low,,,Alin Mutu,Aruna Sreeram,Rick Dales,Mayank Choudhary,Sumit Dhawan
+Mathew Nisbet,mnisbet@proofpoint.com,active,3.33,2025-02-15,2025-04-11,low,,,,Bernardo Fourcade,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Girish Potnis,gpotnis@proofpoint.com,active,3.24,2024-11-16,2025-04-25,low,,,Satya Jena,Satya Jena,John Abel,Remi Thomas,Sumit Dhawan
+Daniel Richmond,drichmond@proofpoint.com,inactive,3.0,2024-11-16,2024-11-22,low,,,,,Sebastian Joll,Rohit Dixit,Sumit Dhawan
+Dennis Rausch,drausch@proofpoint.com,active,3.0,2025-04-19,2025-04-25,low,,,Anand Somani,Anand Somani,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Barak Cohen,bcohen@proofpoint.com,inactive,3.0,2025-01-18,2025-01-24,low,,,Yossi Tamarov,Meny Duek,Ofer Israeli,Mayank Choudhary,Sumit Dhawan
+Kevin Epstein,kepstein@proofpoint.com,inactive,3.0,2025-02-08,2025-02-14,low,,,,,,Rohit Dixit,Sumit Dhawan
+Doyle Groves,dgroves@proofpoint.com,inactive,3.0,2024-11-09,2024-11-22,low,,,,,Daniel Blackford,Ryan Kalember,Sumit Dhawan
+Prema Ramasamy,pramasamy@proofpoint.com,inactive,2.75,2024-11-30,2025-03-28,low,,,,,Dan Rapp,Michael Frendo,Sumit Dhawan
+Gretel Egan,gegan@proofpoint.com,active,2.67,2025-03-01,2025-04-04,low,,,,,Kevin Epstein,Rohit Dixit,Sumit Dhawan
+Alex Kremer,akremer@proofpoint.com,active,2.5,2024-11-09,2025-02-28,low,,,,,,Mayank Choudhary,Sumit Dhawan
+Jessica Vans,jvans@proofpoint.com,inactive,2.5,2025-01-25,2025-02-21,low,,,,,Mike Hickman,Remi Thomas,Sumit Dhawan
+Alexandra Aranda,aaranda@proofpoint.com,active,2.5,2025-04-12,2025-04-25,low,,,,,,,
+Sumit Dhawan,sdhawan@proofpoint.com,active,2.5,2025-01-18,2025-02-21,low,,,,,,,Sumit Dhawan
+Kristin Whinfrey,kwhinfrey@proofpoint.com,active,2.4,2024-11-23,2025-03-14,low,,,Julie Jensen,Jeffrey Reed,Kyle Chin,Remi Thomas,Sumit Dhawan
+Pablo Abian,pabian@proofpoint.com,active,2.33,2024-11-09,2025-04-25,low,,,,,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Riaan Kok,rkok@proofpoint.com,active,2.0,2025-02-22,2025-04-18,low,,,,,Thomas Keating,Michael Frendo,Sumit Dhawan
+Alina Khayms,akhayms@proofpoint.com,inactive,2.0,2024-11-09,2024-12-20,low,,,,Randy Pargman,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Joseph Yun,jyun@proofpoint.com,inactive,2.0,2024-11-16,2024-12-06,low,,,,Rob Randell,Nate Chessin,Blake Salle,Sumit Dhawan
+Kenneth Hook,khook@proofpoint.com,inactive,2.0,2025-03-08,2025-03-14,low,,Anubha Tiwari,Greg Robinson,Jeremiah Ness,Harry Labana,Mayank Choudhary,Sumit Dhawan
+Gavin Strawbridge,gstrawbridge@proofpoint.com,inactive,2.0,2025-02-08,2025-02-14,low,,Spencer Warner,David Valentine,JP Dinh,John Abel,Remi Thomas,Sumit Dhawan
+Mike Lee (PM),miclee@proofpoint.com,active,1.75,2025-01-25,2025-03-14,low,,,,Pablo Passera,Rengabashyam Srinivas,Darren Lee,Sumit Dhawan
+Jim Salter,jsalter@proofpoint.com,inactive,1.6,2024-11-02,2025-02-21,low,,,,Satya Jena,John Abel,Remi Thomas,Sumit Dhawan
+Rohit Dixit,rdixit@proofpoint.com,active,1.5,2024-11-02,2024-11-15,low,,,,,,,Sumit Dhawan
+Trent Adams,tadams@proofpoint.com,active,1.5,2025-03-01,2025-04-11,low,,,,,Prasanna Basavapatna,Michael Frendo,Sumit Dhawan
+Vinit Adhopia,vadhopia@proofpoint.com,inactive,1.5,2025-03-01,2025-03-14,low,,,,Nandak Venkatesan,Harry Labana,Mayank Choudhary,Sumit Dhawan
+Lucia Coppes,lcoppes@proofpoint.com,active,1.5,2025-02-15,2025-02-28,low,,Sean Butler,Rimma Mikheleva,Bernardo Fourcade,Mariano Cilia,Michael Frendo,Sumit Dhawan
+Brian Moline,bmoline@proofpoint.com,inactive,1.5,2024-11-02,2024-11-15,low,,,David Dickison,Michelle Owczarzak,Chris Danyo,Blake Salle,Sumit Dhawan
+Kuldeep Deshwal,kdeshwal@proofpoint.com,active,1.25,2024-11-09,2025-04-04,low,,,,Prema Ramasamy,Dan Rapp,Michael Frendo,Sumit Dhawan
+Linda Lazzareschi,llazzareschi@proofpoint.com,active,1.0,2025-03-15,2025-03-21,low,,,,,,Rohit Dixit,Sumit Dhawan
+Chetan Yaliwal,cyaliwal@proofpoint.com,active,1.0,2025-03-01,2025-03-07,low,,,,,Angela Knox,Michael Frendo,Sumit Dhawan
+Marcus Raney,mraney@proofpoint.com,active,1.0,2025-03-22,2025-03-28,low,,,,,,Kim Sullivan,Sumit Dhawan
+Oscar Munoz,omunoz@proofpoint.com,active,1.0,2025-04-19,2025-04-25,low,,,,Dan Achin,Adam Glass,Michael Frendo,Sumit Dhawan
+John Martin,jomartin@proofpoint.com,active,1.0,2025-04-12,2025-04-18,low,,Alexander Balog,Warren Nagatani,Amy Crum,Chris Danyo,Blake Salle,Sumit Dhawan
+Felicita Medina,fmedina@proofpoint.com,inactive,1.0,2024-11-09,2024-11-15,low,,,,Srikant Reddi,Kevin Epstein,Rohit Dixit,Sumit Dhawan
+John Dials,jdials@proofpoint.com,active,1.0,2024-11-09,2025-03-14,low,,,,Jeffrey Reed,Kyle Chin,Remi Thomas,Sumit Dhawan

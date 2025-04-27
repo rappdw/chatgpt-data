@@ -28,9 +28,6 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
-# Generated data directory
-/data/
-
 # Environment variables
 .env
 
@@ -44,3 +41,4 @@ api_consistency_issues.log
 # Terraform
 .terraform
 .terraform.lock.hcl
+data.incremental

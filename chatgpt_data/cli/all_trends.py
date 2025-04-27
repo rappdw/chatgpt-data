@@ -5,6 +5,7 @@ from pathlib import Path
 from chatgpt_data.analysis.user_analyzer import UserAnalyzer
 from chatgpt_data.analysis.gpt_analyzer import GPTAnalyzer
 from chatgpt_data.analysis.report_generator import ReportGenerator
+from chatgpt_data.analysis.outlier_analyzer import OutlierAnalyzer
 
 
 def main():
@@ -33,6 +34,11 @@ def main():
         "--skip-gpt-trends",
         action="store_true",
         help="Skip generating GPT trend graphs",
+    )
+    parser.add_argument(
+        "--skip-outlier-analysis",
+        action="store_true",
+        help="Skip generating outlier analysis visualizations",
     )
     parser.add_argument(
         "--skip-engagement-report",
@@ -148,6 +154,19 @@ def main():
         except Exception as e:
             print(f"Error in GPT analysis: {str(e)}")
     
+    # Run outlier analysis
+    if not args.skip_outlier_analysis:
+        print("\n=== Running Outlier Analysis ===")
+        try:
+            outlier_analyzer = OutlierAnalyzer(args.data_dir, output_dir)
+            
+            # Generate outlier visualizations
+            outlier_analyzer.generate_all_visualizations()
+            print("✓ Outlier analysis visualizations generated")
+            
+        except Exception as e:
+            print(f"Error in outlier analysis: {str(e)}")
+    
     print("\n=== Analysis Complete ===")
     print(f"All results saved to {output_dir}")
     print("Summary of outputs:")
@@ -156,6 +175,8 @@ def main():
     print("  - GPT trend graphs: active GPTs, GPT messages, unique GPT messagers")
     print("  - User engagement report (CSV)")
     print("  - Non-engaged users report (CSV)")
+    if not args.skip_outlier_analysis:
+        print("  - Outlier analysis: distribution, heatmap, impact, patterns, power users")
 
 
 if __name__ == "__main__":

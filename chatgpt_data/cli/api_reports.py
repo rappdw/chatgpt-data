@@ -252,17 +252,32 @@ def get_engagement_metrics(raw_data: RawData, engagement_metrics: Optional[Engag
     # print(f"Total messages: {total_message_count}")
     return engagement_metrics
 
-def get_users_conversations(api: EnterpriseComplianceAPI, debug_logging: bool = False) -> RawData:
+def get_users_conversations(api: EnterpriseComplianceAPI, debug_logging: bool = False, 
+                           incremental_update: bool = False, 
+                           output_dir: str = "./reports") -> RawData:
     """
     Get users and conversations they have engaged in.
     
     Args:
         api: The EnterpriseComplianceAPI instance
         debug_logging: Whether to print detailed debug logs
+        incremental_update: Whether to perform an incremental update using the last run data
+        output_dir: Directory containing previous data for incremental updates
     
     Returns:
-        A dictionary of users and their engagement data
+        A RawData object with users and their conversation data
     """
+    # If incremental update is requested, try to load the most recent data
+    existing_data = None
+    last_run_timestamp = 0
+    
+    if incremental_update:
+        print("Performing incremental update...")
+        existing_data, last_run_timestamp = find_most_recent_data(output_dir)
+        if existing_data:
+            print(f"Found existing data from {datetime.fromtimestamp(last_run_timestamp, tz=DEFAULT_TIMEZONE).strftime('%Y-%m-%d %H:%M:%S')}")
+        else:
+            print("No existing data found. Performing full data fetch.")
     
     print("Fetching users...")
     # Get all users with progress tracking
@@ -271,31 +286,68 @@ def get_users_conversations(api: EnterpriseComplianceAPI, debug_logging: bool = 
     message_count = 0
     project_map = dict()
     gpt_map = dict()
-    # get the unix timestamp of current time
-    earliest_message_timestamp = datetime.now(DEFAULT_TIMEZONE).timestamp()
-    most_recent_message_timestamp = 0
+    
+    # Initialize with existing data if performing incremental update
+    if existing_data and incremental_update:
+        project_map = existing_data.project_map
+        gpt_map = existing_data.gpt_map
+        # We'll merge new conversation data with existing user data
+        
+        # Initialize timestamps based on existing data
+        earliest_message_timestamp = existing_data.earliest_message_timestamp
+        most_recent_message_timestamp = existing_data.latest_message_timestamp
+        
+        # Copy existing conversations to the new users_dict
+        for user_id, user in existing_data.users.items():
+            if user_id in users_dict:
+                users_dict[user_id].conversations = user.conversations
+    else:
+        # If not an incremental update, start with current time as earliest
+        earliest_message_timestamp = datetime.now(DEFAULT_TIMEZONE).timestamp()
+        most_recent_message_timestamp = 0
+
+    # Track conversation IDs that have been updated in this run
+    processed_conversation_ids = set()
 
     # Process all conversations with a callback function
     def process_conversation(conversation):
-        nonlocal users_dict, conversation_count, message_count, project_map, gpt_map, earliest_message_timestamp, most_recent_message_timestamp
+        nonlocal users_dict, conversation_count, message_count, project_map, gpt_map, earliest_message_timestamp, most_recent_message_timestamp, processed_conversation_ids
         conversation_id = conversation.get("id", "unknown")
         user_id = conversation.get("user_id")
-        last_active = conversation.get("last_active_at")
+        created_at = conversation.get("created_at", 0)
+        last_active = conversation.get("last_active_at", 0)
         title = conversation.get("title")
+        
+        # Track this conversation as processed
+        processed_conversation_ids.add(conversation_id)
 
         user = users_dict.get(user_id)
         if not user:
             print(f"\n\nWARNING: Could not find user with id {user_id} in conversation {conversation_id}\n\n")
             return
         
-        conversation_data = Conversation(
-            id=conversation_id,
-            created_at=conversation.get("created_at"),
-            last_active_at=last_active,
-            title=title,
-        )
-        user.conversations.append(conversation_data)
-        conversation_count += 1
+        # Check if this conversation already exists for the user
+        existing_conv = None
+        for conv in user.conversations:
+            if conv.id == conversation_id:
+                existing_conv = conv
+                break
+        
+        # If conversation exists, we'll update it; otherwise create a new one
+        if existing_conv:
+            conversation_data = existing_conv
+            # Keep existing messages but prepare to add new ones
+            existing_messages = {msg.id: msg for msg in existing_conv.messages}
+        else:
+            conversation_data = Conversation(
+                id=conversation_id,
+                created_at=created_at,
+                last_active_at=last_active,
+                title=title,
+            )
+            user.conversations.append(conversation_data)
+            existing_messages = {}
+            conversation_count += 1
 
         messages_response = conversation.get("messages", {})
         if messages_response.get("has_more"):
@@ -303,40 +355,74 @@ def get_users_conversations(api: EnterpriseComplianceAPI, debug_logging: bool = 
         
         messages = messages_response.get("data", [])
         for msg in messages:
+            msg_id = msg.get("id", "unknown")
+            msg_timestamp = msg.get("created_at")
+            
+            # Skip messages that already exist unless we're doing a full update
+            if msg_id in existing_messages and incremental_update:
+                # We still count existing messages for reporting
+                message_count += 1
+                continue
+                
             gpt_id = msg.get("gpt_id")
             project_id = msg.get("project_id")
-            if gpt_id and not gpt_id in gpt_map:
+            
+            if gpt_id and gpt_id not in gpt_map:
                 gpt_map[gpt_id] = api.get_gpt(gpt_id)
-            if project_id and not project_id in project_map:
+                
+            if project_id and project_id not in project_map:
                 project_map[project_id] = api.get_project(project_id)
-            msg_timestamp = msg.get("created_at")
+                
             if msg_timestamp is not None:
                 if msg_timestamp < earliest_message_timestamp:
                     earliest_message_timestamp = msg_timestamp
                 if msg_timestamp > most_recent_message_timestamp:
                     most_recent_message_timestamp = msg_timestamp
+                    
             message_data = Message(
-                id=msg.get("id", "unknown"),
+                id=msg_id,
                 created_at=msg_timestamp,
                 gpt_id=gpt_id,
                 project_id=project_id,
                 role=msg.get("author", {}).get("role"),
                 tool_name=msg.get("author", {}).get("tool_name"),
             )
-            conversation_data.messages.append(message_data)
-            message_count += 1
+            
+            # Add the message to the conversation's messages
+            if msg_id not in existing_messages:
+                conversation_data.messages.append(message_data)
+                message_count += 1
     
-    # Process all conversations with progress tracking
+    # Process conversations with progress tracking, using the last run timestamp
+    # to only retrieve updated conversations
     print("Processing conversations...")
     api.process_all_conversations(
         callback_fn=process_conversation,
+        since_timestamp=last_run_timestamp if incremental_update else 0,
         debug_logging=debug_logging,
         use_tqdm=True
     )
     
+    # If this is an incremental update, we need to ensure the statistics are accurate
+    if incremental_update and existing_data:
+        # Count all conversations and messages to give accurate statistics
+        total_conversation_count = 0
+        total_message_count = 0
+        for user_id, user in users_dict.items():
+            total_conversation_count += len(user.conversations)
+            for conv in user.conversations:
+                total_message_count += len(conv.messages)
+        
+        conversation_count = total_conversation_count
+        message_count = total_message_count
+    
     # Print summary statistics for verification
     print(f"Retrieved {len(users_dict)} users for analysis")
-    print(f"\nProcessed {conversation_count} total conversations")
+    if incremental_update and existing_data:
+        print(f"\nProcessed {len(processed_conversation_ids)} new or updated conversations")
+        print(f"Total of {conversation_count} conversations in dataset")
+    else:
+        print(f"\nProcessed {conversation_count} total conversations")
     print(f"Processed {message_count} total messages")
     
     return RawData(
@@ -346,6 +432,238 @@ def get_users_conversations(api: EnterpriseComplianceAPI, debug_logging: bool = 
         earliest_message_timestamp=earliest_message_timestamp,
         latest_message_timestamp=most_recent_message_timestamp
     )
+
+def find_most_recent_data(output_dir: str) -> Tuple[Optional[RawData], int]:
+    """
+    Find the most recent pickle file and extract the last run timestamp.
+    
+    Args:
+        output_dir: Directory to search for pickle files
+        
+    Returns:
+        Tuple of (raw_data, last_run_timestamp) where raw_data is the loaded data or None,
+        and last_run_timestamp is the timestamp of the last run (0 if no data found)
+    """
+    pkl_files = glob.glob(os.path.join(output_dir, "raw_data_*.pkl"))
+    
+    if not pkl_files:
+        return None, 0
+        
+    # Sort files by modification time (newest first)
+    pkl_files.sort(key=os.path.getmtime, reverse=True)
+    
+    # Try to load the most recent file
+    try:
+        selected_file = pkl_files[0]
+        print(f"Loading most recent data from {selected_file}...")
+        
+        with open(selected_file, 'rb') as f:
+            raw_data = pickle.load(f)
+            
+        # Use the latest message timestamp as the last run timestamp
+        # Convert to integer timestamp (removing microsecond precision)
+        last_run_timestamp = int(raw_data.latest_message_timestamp)
+        
+        print(f"Successfully loaded data with {len(raw_data.users)} users.")
+        print(f"Last run timestamp: {datetime.fromtimestamp(last_run_timestamp, tz=DEFAULT_TIMEZONE).strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        return raw_data, last_run_timestamp
+        
+    except Exception as e:
+        print(f"Error loading pickle file: {str(e)}")
+        return None, 0
+
+def save_raw_data(raw_data: RawData, output_dir: str) -> tuple[str, str]:
+    """
+    Save raw data to disk in both pickle and JSON formats.
+    
+    Args:
+        raw_data: The raw data to save
+        output_dir: Directory to save the files
+        
+    Returns:
+        tuple: Paths to the pickle and JSON files
+    """
+    # Create a timestamp for the filenames
+    timestamp = datetime.now(DEFAULT_TIMEZONE).strftime("%Y%m%d_%H%M%S")
+    
+    # Save as pickle (preserves all object types)
+    pickle_path = os.path.join(output_dir, f"raw_data_{timestamp}.pkl")
+    with open(pickle_path, 'wb') as f:
+        pickle.dump(raw_data, f)
+    print(f"Raw data saved to {pickle_path}")
+    
+    # Save as JSON (more human-readable)
+    # Convert raw_data to a serializable format
+    json_data = {
+        "users": {
+            user_id: {
+                "id": user_id,
+                "email": user.email,
+                "name": user.name,
+                "status": user.status,
+                "conversations": [
+                    {
+                        "id": conv.id,
+                        "title": conv.title,
+                        "created_at": conv.created_at,
+                        "last_active_at": conv.last_active_at,
+                        "messages": [
+                            {
+                                "id": msg.id,
+                                "created_at": msg.created_at,
+                                "role": msg.role,
+                                "gpt_id": msg.gpt_id,
+                                "project_id": msg.project_id,
+                                "tool_name": msg.tool_name
+                            } for msg in conv.messages
+                        ]
+                    } for conv in user.conversations
+                ]
+            } for user_id, user in raw_data.users.items()
+        },
+        "earliest_message_timestamp": raw_data.earliest_message_timestamp,
+        "latest_message_timestamp": raw_data.latest_message_timestamp
+    }
+    
+    json_path = os.path.join(output_dir, f"raw_data_{timestamp}.json")
+    with open(json_path, 'w') as f:
+        json.dump(json_data, f, indent=2)
+    print(f"Raw data saved to {json_path}")
+    
+    return pickle_path, json_path
+
+def process_engagement_data(raw_data: RawData, output_dir: str) -> None:
+    # convert rawdata.earliest_message_timestamp and raw_data.latest_message_timestamp to datetime
+    # Add GPTs and Projects to the engagement metrics
+    start_date = datetime.fromtimestamp(raw_data.earliest_message_timestamp, tz=DEFAULT_TIMEZONE)
+    end_date = datetime.fromtimestamp(raw_data.latest_message_timestamp, tz=DEFAULT_TIMEZONE)   
+    print(f"Processing engagement data for date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+    
+    # Create EngagementMetrics object with users and GPTs
+    user_metrics = EngagementMetrics(
+        users=raw_data.users,
+        gpts=raw_data.gpt_map
+    )
+    
+    # Process message data to populate metrics
+    user_metrics = get_engagement_metrics(raw_data, user_metrics)
+
+    # Save engagement metrics to CSV
+    save_engagement_metrics_to_csv(
+        metrics=user_metrics,
+        output_dir=output_dir,
+        end_date=end_date,
+        start_date=start_date
+    )
+
+def process_data_in_weekly_chunks(raw_data: RawData, output_dir: str, allow_partial_weeks: bool = False) -> None:
+    """
+    Process data in weekly chunks from the earliest to latest timestamp in raw_data.
+    
+    Args:
+        raw_data: The raw data containing users and timestamp information
+        output_dir: Directory to save output files
+        allow_partial_weeks: If True, process partial weeks at the end of the date range
+        
+    Returns:
+        None
+    """
+    # Check for existing CSV files before processing any chunks
+    existing_files = find_existing_csv_files(output_dir)
+    if existing_files:
+        print(f"Found {len(existing_files)} existing CSV files in {output_dir}")
+        for file in existing_files[:5]:  # Show up to 5 files
+            print(f"  - {os.path.basename(file)}")
+        if len(existing_files) > 5:
+            print(f"  - ... and {len(existing_files) - 5} more")
+            
+        # Ask user for confirmation
+        response = input("\nDelete these files before proceeding with weekly processing? [y/N] ").strip().lower()
+        if response == 'y' or response == 'yes':
+            for file in existing_files:
+                try:
+                    os.remove(file)
+                    print(f"Deleted: {os.path.basename(file)}")
+                except Exception as e:
+                    print(f"Error deleting {file}: {str(e)}")
+            print(f"Deleted {len(existing_files)} existing files")
+        else:
+            print("Keeping existing files")
+    
+    # Get datetime objects from timestamps
+    raw_start_dt = datetime.fromtimestamp(raw_data.earliest_message_timestamp, tz=DEFAULT_TIMEZONE)
+    raw_end_dt = datetime.fromtimestamp(raw_data.latest_message_timestamp, tz=DEFAULT_TIMEZONE)
+    
+    # Normalize to start of day for start date and end of day for end date
+    current_start = datetime(raw_start_dt.year, raw_start_dt.month, raw_start_dt.day, 0, 0, 0, tzinfo=DEFAULT_TIMEZONE)
+    end_date = datetime(raw_end_dt.year, raw_end_dt.month, raw_end_dt.day, 23, 59, 59, tzinfo=DEFAULT_TIMEZONE)
+    
+    while current_start <= end_date:
+        # Calculate end of current week (or use end_date if it's sooner)
+        week_end = current_start + timedelta(days=6)
+        # Set to end of day (23:59:59)
+        current_end = datetime(week_end.year, week_end.month, week_end.day, 23, 59, 59, tzinfo=DEFAULT_TIMEZONE)
+        # Don't go beyond the overall end date
+        if current_end > end_date:
+            current_end = end_date
+            
+            # Check if this is a partial week and skip if not allowed
+            days_in_chunk = (current_end - current_start).days + 1
+            if not allow_partial_weeks and days_in_chunk < 7:
+                print(f"Skipping partial week with only {days_in_chunk} days (from {current_start.strftime('%Y-%m-%d')} to {current_end.strftime('%Y-%m-%d')})")
+                break
+        
+        # Create a copy of raw_data with updated timestamps for this chunk
+        # Ensure timezone-aware datetime objects for timestamp conversion
+        if current_start.tzinfo is None:
+            current_start = current_start.replace(tzinfo=DEFAULT_TIMEZONE)
+        if current_end.tzinfo is None:
+            current_end = current_end.replace(tzinfo=DEFAULT_TIMEZONE)
+            
+        chunk_data = RawData(
+            users=raw_data.users,
+            earliest_message_timestamp=current_start.timestamp(),
+            latest_message_timestamp=current_end.timestamp(),
+            project_map=raw_data.project_map,
+            gpt_map=raw_data.gpt_map
+        )
+        
+        # Process this week's data
+        print(f"Processing data for week: {current_start.strftime('%Y-%m-%d')} to {current_end.strftime('%Y-%m-%d')}")
+        process_engagement_data(chunk_data, output_dir)
+        
+        # Move to next week (start of next day)
+        current_start = (current_end + timedelta(seconds=1)).replace(hour=0, minute=0, second=0)
+
+def apply_date_filters(raw_data: RawData, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None) -> RawData:
+    """
+    Apply date filters to raw data by updating the timestamp boundaries.
+    
+    Args:
+        raw_data: The raw data to filter
+        start_date: Optional start date to filter from
+        end_date: Optional end date to filter to
+        
+    Returns:
+        RawData: The filtered raw data
+    """
+    if start_date:
+        # Normalize to start of day using our default timezone
+        start_date = datetime(start_date.year, start_date.month, start_date.day, 0, 0, 0, tzinfo=DEFAULT_TIMEZONE)
+        # Ensure timezone-aware datetime for timestamp conversion
+        if start_date.tzinfo is None:
+            start_date = start_date.replace(tzinfo=DEFAULT_TIMEZONE)
+        raw_data.earliest_message_timestamp = start_date.timestamp()
+    if end_date:
+        # Normalize to end of day using our default timezone
+        end_date = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59, tzinfo=DEFAULT_TIMEZONE)
+        # Ensure timezone-aware datetime for timestamp conversion
+        if end_date.tzinfo is None:
+            end_date = end_date.replace(tzinfo=DEFAULT_TIMEZONE)
+        raw_data.latest_message_timestamp = end_date.timestamp()
+    
+    return raw_data
 
 def find_existing_csv_files(output_dir: str) -> List[str]:
     """
@@ -561,273 +879,3 @@ def save_gpt_engagement_metrics_to_csv(metrics: EngagementMetrics, output_dir: s
         print(f"Saved engagement metrics for {len(active_rows)} gpts to {output_file}")
     else:
         print("No gpt engagement data to save")
-    
-
-
-def process_engagement_data(raw_data: RawData, output_dir: str) -> None:
-    # convert rawdata.earliest_message_timestamp and raw_data.latest_message_timestamp to datetime
-    # Add GPTs and Projects to the engagement metrics
-    start_date = datetime.fromtimestamp(raw_data.earliest_message_timestamp, tz=DEFAULT_TIMEZONE)
-    end_date = datetime.fromtimestamp(raw_data.latest_message_timestamp, tz=DEFAULT_TIMEZONE)   
-    print(f"Processing engagement data for date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
-    
-    # Create EngagementMetrics object with users and GPTs
-    user_metrics = EngagementMetrics(
-        users=raw_data.users,
-        gpts=raw_data.gpt_map
-    )
-    
-    # Process message data to populate metrics
-    user_metrics = get_engagement_metrics(raw_data, user_metrics)
-
-    # Save engagement metrics to CSV
-    save_engagement_metrics_to_csv(
-        metrics=user_metrics,
-        output_dir=output_dir,
-        end_date=end_date,
-        start_date=start_date
-    )
-
-def process_data_in_weekly_chunks(raw_data: RawData, output_dir: str, allow_partial_weeks: bool = False) -> None:
-    """
-    Process data in weekly chunks from the earliest to latest timestamp in raw_data.
-    
-    Args:
-        raw_data: The raw data containing users and timestamp information
-        output_dir: Directory to save output files
-        allow_partial_weeks: If True, process partial weeks at the end of the date range
-        
-    Returns:
-        None
-    """
-    # Check for existing CSV files before processing any chunks
-    existing_files = find_existing_csv_files(output_dir)
-    if existing_files:
-        print(f"Found {len(existing_files)} existing CSV files in {output_dir}")
-        for file in existing_files[:5]:  # Show up to 5 files
-            print(f"  - {os.path.basename(file)}")
-        if len(existing_files) > 5:
-            print(f"  - ... and {len(existing_files) - 5} more")
-            
-        # Ask user for confirmation
-        response = input("\nDelete these files before proceeding with weekly processing? [y/N] ").strip().lower()
-        if response == 'y' or response == 'yes':
-            for file in existing_files:
-                try:
-                    os.remove(file)
-                    print(f"Deleted: {os.path.basename(file)}")
-                except Exception as e:
-                    print(f"Error deleting {file}: {str(e)}")
-            print(f"Deleted {len(existing_files)} existing files")
-        else:
-            print("Keeping existing files")
-    
-    # Get datetime objects from timestamps
-    raw_start_dt = datetime.fromtimestamp(raw_data.earliest_message_timestamp, tz=DEFAULT_TIMEZONE)
-    raw_end_dt = datetime.fromtimestamp(raw_data.latest_message_timestamp, tz=DEFAULT_TIMEZONE)
-    
-    # Normalize to start of day for start date and end of day for end date
-    current_start = datetime(raw_start_dt.year, raw_start_dt.month, raw_start_dt.day, 0, 0, 0, tzinfo=DEFAULT_TIMEZONE)
-    end_date = datetime(raw_end_dt.year, raw_end_dt.month, raw_end_dt.day, 23, 59, 59, tzinfo=DEFAULT_TIMEZONE)
-    
-    while current_start <= end_date:
-        # Calculate end of current week (or use end_date if it's sooner)
-        week_end = current_start + timedelta(days=6)
-        # Set to end of day (23:59:59)
-        current_end = datetime(week_end.year, week_end.month, week_end.day, 23, 59, 59, tzinfo=DEFAULT_TIMEZONE)
-        # Don't go beyond the overall end date
-        if current_end > end_date:
-            current_end = end_date
-            
-            # Check if this is a partial week and skip if not allowed
-            days_in_chunk = (current_end - current_start).days + 1
-            if not allow_partial_weeks and days_in_chunk < 7:
-                print(f"Skipping partial week with only {days_in_chunk} days (from {current_start.strftime('%Y-%m-%d')} to {current_end.strftime('%Y-%m-%d')})")
-                break
-        
-        # Create a copy of raw_data with updated timestamps for this chunk
-        # Ensure timezone-aware datetime objects for timestamp conversion
-        if current_start.tzinfo is None:
-            current_start = current_start.replace(tzinfo=DEFAULT_TIMEZONE)
-        if current_end.tzinfo is None:
-            current_end = current_end.replace(tzinfo=DEFAULT_TIMEZONE)
-            
-        chunk_data = RawData(
-            users=raw_data.users,
-            earliest_message_timestamp=current_start.timestamp(),
-            latest_message_timestamp=current_end.timestamp(),
-            project_map=raw_data.project_map,
-            gpt_map=raw_data.gpt_map
-        )
-        
-        # Process this week's data
-        print(f"Processing data for week: {current_start.strftime('%Y-%m-%d')} to {current_end.strftime('%Y-%m-%d')}")
-        process_engagement_data(chunk_data, output_dir)
-        
-        # Move to next week (start of next day)
-        current_start = (current_end + timedelta(seconds=1)).replace(hour=0, minute=0, second=0)
-
-def apply_date_filters(raw_data: RawData, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None) -> RawData:
-    """
-    Apply date filters to raw data by updating the timestamp boundaries.
-    
-    Args:
-        raw_data: The raw data to filter
-        start_date: Optional start date to filter from
-        end_date: Optional end date to filter to
-        
-    Returns:
-        RawData: The filtered raw data
-    """
-    if start_date:
-        # Normalize to start of day using our default timezone
-        start_date = datetime(start_date.year, start_date.month, start_date.day, 0, 0, 0, tzinfo=DEFAULT_TIMEZONE)
-        # Ensure timezone-aware datetime for timestamp conversion
-        if start_date.tzinfo is None:
-            start_date = start_date.replace(tzinfo=DEFAULT_TIMEZONE)
-        raw_data.earliest_message_timestamp = start_date.timestamp()
-    if end_date:
-        # Normalize to end of day using our default timezone
-        end_date = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59, tzinfo=DEFAULT_TIMEZONE)
-        # Ensure timezone-aware datetime for timestamp conversion
-        if end_date.tzinfo is None:
-            end_date = end_date.replace(tzinfo=DEFAULT_TIMEZONE)
-        raw_data.latest_message_timestamp = end_date.timestamp()
-    
-    return raw_data
-
-def save_raw_data(raw_data: RawData, output_dir: str) -> tuple[str, str]:
-    """
-    Save raw data to disk in both pickle and JSON formats.
-    
-    Args:
-        raw_data: The raw data to save
-        output_dir: Directory to save the files
-        loaded_data: Whether the data was loaded from existing files
-        
-    Returns:
-        tuple: Paths to the pickle and JSON files
-    """
-    # Create a timestamp for the filenames
-    timestamp = datetime.now(DEFAULT_TIMEZONE).strftime("%Y%m%d_%H%M%S")
-    
-    # Save as pickle (preserves all object types)
-    pickle_path = os.path.join(output_dir, f"raw_data_{timestamp}.pkl")
-    with open(pickle_path, 'wb') as f:
-        pickle.dump(raw_data, f)
-    print(f"Raw data saved to {pickle_path}")
-    
-    # Save as JSON (more human-readable)
-    # Convert raw_data to a serializable format
-    json_data = {
-        "users": {
-            user_id: {
-                "id": user_id,
-                "email": user.email,
-                "name": user.name,
-                "status": user.status,
-                "conversations": [
-                    {
-                        "id": conv.id,
-                        "title": conv.title,
-                        "created_at": conv.created_at,
-                        "last_active_at": conv.last_active_at,
-                        "messages": [
-                            {
-                                "id": msg.id,
-                                "created_at": msg.created_at,
-                                "role": msg.role,
-                                "gpt_id": msg.gpt_id,
-                                "project_id": msg.project_id,
-                                "tool_name": msg.tool_name
-                            } for msg in conv.messages
-                        ]
-                    } for conv in user.conversations
-                ]
-            } for user_id, user in raw_data.users.items()
-        },
-        "earliest_message_timestamp": raw_data.earliest_message_timestamp,
-        "latest_message_timestamp": raw_data.latest_message_timestamp
-    }
-    
-    json_path = os.path.join(output_dir, f"raw_data_{timestamp}.json")
-    with open(json_path, 'w') as f:
-        json.dump(json_data, f, indent=2)
-    print(f"Raw data saved to {json_path}")
-    
-    return pickle_path, json_path
-
-def load_existing_data(output_dir: str, force: bool = False) -> tuple[Optional[RawData], bool]:
-    """
-    Check for existing pickle files and prompt user to load one.
-    
-    Args:
-        output_dir: Directory to search for pickle files
-        force: If True, skip loading from pickle and return None
-        
-    Returns:
-        tuple: (raw_data, loaded_data) where raw_data is the loaded data or None,
-               and loaded_data is a boolean indicating if data was loaded
-    """
-    pkl_files = glob.glob(os.path.join(output_dir, "raw_data_*.pkl"))
-    raw_data = None
-    loaded_data = False
-    
-    if pkl_files and not force:
-        # Sort files by modification time (newest first)
-        pkl_files.sort(key=os.path.getmtime, reverse=True)
-        
-        # Display the available pickle files
-        print("\nFound existing data files:")
-        for i, file in enumerate(pkl_files[:5]):  # Show at most 5 most recent files
-            file_time = datetime.fromtimestamp(os.path.getmtime(file), tz=DEFAULT_TIMEZONE)
-            file_size = os.path.getsize(file) / (1024 * 1024)  # Size in MB
-            print(f"{i+1}. {os.path.basename(file)} - {file_time.strftime('%Y-%m-%d %H:%M:%S')} ({file_size:.2f} MB)")
-        
-        # Ask user if they want to use an existing file
-        response = input("\nUse existing data file? (y/yes or file number 1-5, n/no to use API): ").lower().strip()
-        
-        # Check if response is a number (direct file selection)
-        file_choice = None
-        if response.isdigit():
-            file_choice = int(response)
-            if 1 <= file_choice <= min(5, len(pkl_files)):
-                use_existing = True
-            else:
-                print(f"Invalid file number. Must be between 1 and {min(5, len(pkl_files))}.")
-                use_existing = False
-        else:
-            # Check if response is yes/y
-            use_existing = response in ['y', 'yes']
-        
-        if use_existing:
-            # If user didn't specify a file number directly but said yes
-            if file_choice is None:
-                file_choice = 1  # Default to most recent
-                if len(pkl_files) > 1:
-                    choice = input(f"Enter file number (1-{min(5, len(pkl_files))}), or press Enter for most recent: ").strip()
-                    if choice and choice.isdigit():
-                        file_choice = int(choice)
-                        if file_choice < 1 or file_choice > min(5, len(pkl_files)):
-                            file_choice = 1
-                            print("Invalid choice, using most recent file.")
-            
-            selected_file = pkl_files[file_choice-1]
-            print(f"Loading data from {selected_file}...")
-            
-            try:
-                with open(selected_file, 'rb') as f:
-                    raw_data = pickle.load(f)
-                print(f"Successfully loaded data with {len(raw_data.users)} users.")
-                loaded_data = True
-                
-                # Display date range from the loaded data
-                start_dt = datetime.fromtimestamp(raw_data.earliest_message_timestamp, tz=DEFAULT_TIMEZONE)
-                end_dt = datetime.fromtimestamp(raw_data.latest_message_timestamp, tz=DEFAULT_TIMEZONE)
-                print(f"Data covers period: {start_dt.strftime('%Y-%m-%d')} to {end_dt.strftime('%Y-%m-%d')}")
-            except Exception as e:
-                print(f"Error loading pickle file: {str(e)}")
-                print("Will fetch data from API instead.")
-                raw_data = None
-    
-    return raw_data, loaded_data

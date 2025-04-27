@@ -20,7 +20,6 @@ from chatgpt_data.cli.api_reports import (
     process_engagement_data,
     process_data_in_weekly_chunks,
     apply_date_filters,
-    load_existing_data,
 )
 
 # Configure logger

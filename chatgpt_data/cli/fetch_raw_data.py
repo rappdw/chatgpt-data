@@ -64,6 +64,11 @@ def main() -> int:
         action="store_true",
         help="Enable detailed debug logging for verification",
     )
+    data_group.add_argument(
+        "--incremental",
+        action="store_true",
+        help="Perform an incremental update using the last run timestamp",
+    )
     
     # Add page_size parameter
     parser.add_argument(
@@ -114,9 +119,19 @@ def main() -> int:
                 page_size=min(args.page_size, 200),  # Ensure page_size doesn't exceed API limit
             )
             
-            # Get user engagement metrics
+            # Get user engagement metrics with incremental update if specified
             logger.info("Fetching users and conversations data...")
-            raw_data = get_users_conversations(api, debug_logging=args.debug)
+            if args.incremental:
+                logger.info("Using incremental update mode (will only fetch new/updated data since last run)")
+                raw_data = get_users_conversations(
+                    api, 
+                    debug_logging=args.debug, 
+                    incremental_update=True,
+                    output_dir=str(output_dir)
+                )
+            else:
+                logger.info("Using full update mode (will fetch all data)")
+                raw_data = get_users_conversations(api, debug_logging=args.debug)
 
             # Save raw data to disk for later analysis
             pickle_path, json_path = save_raw_data(raw_data, str(output_dir))
