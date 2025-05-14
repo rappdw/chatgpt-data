@@ -40,5 +40,8 @@ ENV PYTHONUNBUFFERED=1
 COPY server.py .
 COPY index.html .
 
+# Copy data directory
+COPY data /app/data
+
 # Command to run the server
 CMD ["python", "server.py"]
